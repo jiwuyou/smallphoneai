@@ -128,7 +128,7 @@ button:disabled {
 .terminal-mode-head {
   padding: 0 14px;
   display: grid;
-  grid-template-columns: 1fr 92px;
+  grid-template-columns: 1fr 40px;
   align-items: center;
   gap: 10px;
   border-bottom: 1px solid #26342d;
@@ -155,6 +155,15 @@ button:disabled {
   border-color: #3b5947;
   color: #d8f4df;
   background: #21382b;
+}
+
+.terminal-menu-button {
+  color: #d8f4df;
+  background: #21382b;
+}
+
+.terminal-menu-button:hover {
+  background: #284334;
 }
 
 .terminal-canvas {
@@ -1128,6 +1137,14 @@ button:disabled {
   display: block;
 }
 
+.terminal-hint-line {
+  display: block;
+  margin-top: 12px;
+  color: #87a993;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 .terminal-cursor {
   display: inline-block;
   width: 8px;
@@ -1145,6 +1162,10 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
+}
+
+.status-strip.concise {
+  grid-template-columns: repeat(2, 1fr);
 }
 
 .status-pill {
@@ -1321,6 +1342,17 @@ p {
   gap: 12px;
 }
 
+.home-actions-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.home-action-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 .key-actions {
   display: grid;
   grid-template-columns: 96px 1fr;
@@ -1438,11 +1470,70 @@ p {
   color: #78817b;
   background: #eff3ef;
   font-size: 12px;
+  overflow: auto;
+  white-space: nowrap;
+  user-select: all;
 }
 
 .address.ready {
   color: #174934;
   background: #e5f3ec;
+}
+
+.copy-url-box {
+  display: grid;
+  gap: 8px;
+}
+
+.copy-url-box > span {
+  color: #65716a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.browser-preview {
+  overflow: hidden;
+  border: 1px solid #26342d;
+  border-radius: 8px;
+  background: #101812;
+}
+
+.browser-preview-bar {
+  min-height: 38px;
+  padding: 8px 10px;
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  gap: 9px;
+  align-items: center;
+  border-bottom: 1px solid #26342d;
+  background: #16221a;
+}
+
+.browser-preview-bar span {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #f0d88a;
+}
+
+.browser-preview-bar code {
+  min-width: 0;
+  overflow: hidden;
+  color: #d7f5df;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.browser-preview-body {
+  padding: 14px;
+  display: grid;
+  gap: 6px;
+  background: #f7fcf8;
+}
+
+.browser-preview-body strong {
+  color: #17211c;
 }
 
 .terminal-dock {
@@ -1795,6 +1886,101 @@ p {
   font-weight: 800;
 }
 
+.permission-card-list,
+.target-tool-list {
+  display: grid;
+  gap: 10px;
+}
+
+.permission-card {
+  padding: 13px;
+  display: grid;
+  gap: 12px;
+  border: 1px solid #efd59a;
+  border-radius: 8px;
+  background: #fffaf0;
+}
+
+.permission-card.ready {
+  border-color: #b9d9c8;
+  background: #f7fcf8;
+}
+
+.permission-card > div:first-child {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.permission-card svg {
+  color: #a46908;
+}
+
+.permission-card.ready svg {
+  color: #166c49;
+}
+
+.permission-card strong {
+  color: #17211c;
+  font-size: 14px;
+}
+
+.permission-card-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.permission-card-actions span {
+  color: #65716a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.target-tool-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.target-tool-row {
+  min-height: 58px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid #dce4dc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.target-tool-row:has(input:checked) {
+  border-color: #b9d9c8;
+  background: #f7fcf8;
+}
+
+.target-tool-row input {
+  margin-top: 4px;
+}
+
+.target-tool-row span {
+  display: grid;
+  gap: 3px;
+}
+
+.target-tool-row strong {
+  color: #17211c;
+  font-size: 14px;
+}
+
+.target-tool-row small {
+  color: #65716a;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .manual-head {
   display: grid;
   gap: 12px;
@@ -1938,6 +2124,34 @@ p {
 
 .setting-row strong {
   color: #155f43;
+}
+
+.setting-toggle {
+  min-height: 58px;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #dce4dc;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.setting-toggle span {
+  display: grid;
+  gap: 3px;
+}
+
+.setting-toggle strong {
+  color: #17211c;
+  font-size: 14px;
+}
+
+.setting-toggle small {
+  color: #65716a;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .muted {

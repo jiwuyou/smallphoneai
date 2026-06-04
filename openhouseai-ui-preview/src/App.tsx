@@ -24,7 +24,9 @@ import {
 
 type SectionId =
   | "main"
+  | "permissions"
   | "manual"
+  | "keyReplacement"
   | "opencodeControl"
   | "terminalGuide"
   | "shortcuts"
@@ -43,9 +45,10 @@ type OnboardingStep =
 type AppMode = "maintainer" | "terminal";
 
 const sections: Array<{ id: SectionId; label: string; icon: typeof Activity }> = [
-  { id: "main", label: "初始化", icon: Activity },
   { id: "manual", label: "使用手册", icon: FileText },
   { id: "opencodeControl", label: "OpenCode 控制", icon: Play },
+  { id: "keyReplacement", label: "DeepSeek Key 替换", icon: KeyRound },
+  { id: "permissions", label: "权限获取", icon: ShieldCheck },
   { id: "terminalGuide", label: "终端教学", icon: Terminal },
   { id: "shortcuts", label: "终端快捷键", icon: Keyboard },
   { id: "repair", label: "维护与修复", icon: Wrench },
@@ -149,6 +152,8 @@ function App() {
   const [openCodeStarted, setOpenCodeStarted] = useState(false);
   const [copied, setCopied] = useState(false);
   const [batteryOptimizationIgnored, setBatteryOptimizationIgnored] = useState(false);
+  const [fileStoragePermissionGranted, setFileStoragePermissionGranted] = useState(true);
+  const [overlayPermissionGranted, setOverlayPermissionGranted] = useState(false);
   const [batteryGuideOpen, setBatteryGuideOpen] = useState(false);
   const [terminalTutorialActive, setTerminalTutorialActive] = useState(false);
   const [terminalTutorialSeen, setTerminalTutorialSeen] = useState(false);
@@ -156,8 +161,12 @@ function App() {
   const [batteryOptimizationSkipped, setBatteryOptimizationSkipped] = useState(false);
   const [deepseekKeySkipped, setDeepseekKeySkipped] = useState(false);
   const [deepseekConfigSkipped, setDeepseekConfigSkipped] = useState(false);
+  const [openCodePort, setOpenCodePort] = useState("4096");
+  const [openCodeBrowserOpened, setOpenCodeBrowserOpened] = useState(false);
+  const [showSmallTerminalHints, setShowSmallTerminalHints] = useState(true);
 
   const keyReady = deepseekKey.trim().length >= 8;
+  const openCodeAddress = `http://127.0.0.1:${openCodePort || "4096"}`;
   const initDone = initState === "done";
   const batteryReady = batteryOptimizationIgnored || batteryOptimizationSkipped;
   const keyStepReady = (keyReady && deepseekKeySaved) || deepseekKeySkipped;
@@ -228,6 +237,7 @@ function App() {
     setInitState("running");
     setOnboardingStep("readingGuide");
     setInitGuideDismissed(false);
+    setOpenCodeBrowserOpened(false);
   }
 
   function updateDeepseekKey(value: string) {
@@ -237,6 +247,7 @@ function App() {
     setDeepseekKeySkipped(false);
     setDeepseekConfigSkipped(false);
     setOpenCodeStarted(false);
+    setOpenCodeBrowserOpened(false);
     setInitGuideDismissed(false);
   }
 
@@ -275,12 +286,17 @@ function App() {
     setOpenCodeStarted(false);
     setCopied(false);
     setBatteryOptimizationIgnored(false);
+    setFileStoragePermissionGranted(true);
+    setOverlayPermissionGranted(false);
     setTerminalTutorialActive(false);
     setTerminalTutorialSeen(false);
     setInitGuideDismissed(false);
     setBatteryOptimizationSkipped(false);
     setDeepseekKeySkipped(false);
     setDeepseekConfigSkipped(false);
+    setOpenCodePort("4096");
+    setOpenCodeBrowserOpened(false);
+    setShowSmallTerminalHints(true);
   }
 
   function selectSection(nextSection: SectionId) {
@@ -292,6 +308,12 @@ function App() {
     setTerminalTutorialActive(false);
     setAppMode("terminal");
     setSidebarOpen(false);
+  }
+
+  function openMaintainerHome() {
+    setSection("main");
+    setSidebarOpen(false);
+    setAppMode("maintainer");
   }
 
   function startTerminalTutorial() {
@@ -359,6 +381,7 @@ function App() {
 
   function stopOpenCode() {
     setOpenCodeStarted(false);
+    setOpenCodeBrowserOpened(false);
   }
 
   function copyOpenCodeAddress() {
@@ -366,7 +389,12 @@ function App() {
     window.setTimeout(() => setCopied(false), 1600);
   }
 
-  const sectionTitle = sections.find((item) => item.id === section)?.label ?? "初始化";
+  function openOpenCodeInBrowserPreview() {
+    if (!openCodeStarted) return;
+    setOpenCodeBrowserOpened(true);
+  }
+
+  const sectionTitle = section === "main" ? "首页" : sections.find((item) => item.id === section)?.label ?? "首页";
 
   return (
     <div className="preview-shell">
@@ -380,7 +408,8 @@ function App() {
           <TerminalMode
             tutorialActive={terminalTutorialActive}
             onFinishTutorial={() => setTerminalTutorialActive(false)}
-            onOpenMaintainer={() => setAppMode("maintainer")}
+            onOpenMaintainer={openMaintainerHome}
+            showSmallTerminalHints={showSmallTerminalHints}
             onboardingStep={onboardingStep}
             initState={initState}
             initDone={initDone}
@@ -401,6 +430,7 @@ function App() {
             saveDeepseekKey={saveDeepseekKey}
             configureDeepseek={configureDeepseek}
             openCodeStarted={openCodeStarted}
+            openCodeAddress={openCodeAddress}
             copied={copied}
             startOpenCode={startOpenCode}
             stopOpenCode={stopOpenCode}
@@ -461,7 +491,7 @@ function App() {
             <Terminal size={18} />
             <span>
               回到终端
-              <small>退出维护器界面</small>
+              <small>返回终端界面</small>
             </span>
             <ChevronRight size={16} />
           </button>
@@ -481,7 +511,11 @@ function App() {
               deepseekConfigSkipped={deepseekConfigSkipped}
               currentStep={currentStep}
               openCodeStarted={openCodeStarted}
+              openCodeAddress={openCodeAddress}
               batteryOptimizationIgnored={batteryOptimizationIgnored}
+              batteryOptimizationSkipped={batteryOptimizationSkipped}
+              fileStoragePermissionGranted={fileStoragePermissionGranted}
+              overlayPermissionGranted={overlayPermissionGranted}
               setupComplete={setupComplete}
               launchConfigConfirmed={launchConfigConfirmed}
               resetPreview={resetPreview}
@@ -490,7 +524,30 @@ function App() {
               terminalTutorialSeen={terminalTutorialSeen}
             />
           )}
+          {section === "permissions" && (
+            <PermissionsScreen
+              batteryOptimizationIgnored={batteryOptimizationIgnored}
+              batteryOptimizationSkipped={batteryOptimizationSkipped}
+              fileStoragePermissionGranted={fileStoragePermissionGranted}
+              overlayPermissionGranted={overlayPermissionGranted}
+              confirmBatteryIgnored={confirmBatteryIgnored}
+              grantFileStoragePermission={() => setFileStoragePermissionGranted(true)}
+              grantOverlayPermission={() => setOverlayPermissionGranted(true)}
+            />
+          )}
           {section === "manual" && <ManualScreen />}
+          {section === "keyReplacement" && (
+            <DeepSeekKeyReplacementScreen
+              deepseekKey={deepseekKey}
+              keyReady={keyReady}
+              deepseekKeySaved={deepseekKeySaved}
+              deepseekConfigured={deepseekConfigured}
+              initDone={initDone}
+              setDeepseekKey={updateDeepseekKey}
+              saveDeepseekKey={saveDeepseekKey}
+              configureDeepseek={configureDeepseek}
+            />
+          )}
           {section === "opencodeControl" && (
             <OpenCodeControlScreen
               initDone={initDone}
@@ -498,10 +555,15 @@ function App() {
               deepseekConfigured={deepseekConfigured}
               launchConfigConfirmed={launchConfigConfirmed}
               openCodeStarted={openCodeStarted}
+              openCodePort={openCodePort}
+              openCodeAddress={openCodeAddress}
+              browserOpened={openCodeBrowserOpened}
               copied={copied}
+              setOpenCodePort={setOpenCodePort}
               startOpenCode={startOpenCode}
               stopOpenCode={stopOpenCode}
               copyAddress={copyOpenCodeAddress}
+              openBrowserPreview={openOpenCodeInBrowserPreview}
             />
           )}
           {section === "terminalGuide" && (
@@ -514,7 +576,13 @@ function App() {
           {section === "shortcuts" && <TerminalShortcutsScreen />}
           {section === "repair" && <RepairScreen resetPreview={resetPreview} />}
           {section === "logs" && <LogsScreen />}
-          {section === "advanced" && <AdvancedScreen />}
+          {section === "advanced" && (
+            <AdvancedScreen
+              openCodePort={openCodePort}
+              showSmallTerminalHints={showSmallTerminalHints}
+              setShowSmallTerminalHints={setShowSmallTerminalHints}
+            />
+          )}
         </section>
           </>
         )}
@@ -560,6 +628,7 @@ function TerminalMode({
   tutorialActive,
   onFinishTutorial,
   onOpenMaintainer,
+  showSmallTerminalHints,
   onboardingStep,
   initState,
   initDone,
@@ -580,6 +649,7 @@ function TerminalMode({
   saveDeepseekKey,
   configureDeepseek,
   openCodeStarted,
+  openCodeAddress,
   copied,
   startOpenCode,
   stopOpenCode,
@@ -595,6 +665,7 @@ function TerminalMode({
   tutorialActive: boolean;
   onFinishTutorial: () => void;
   onOpenMaintainer: () => void;
+  showSmallTerminalHints: boolean;
   onboardingStep: OnboardingStep;
   initState: InitState;
   initDone: boolean;
@@ -618,6 +689,7 @@ function TerminalMode({
   saveDeepseekKey: () => void;
   configureDeepseek: () => void;
   openCodeStarted: boolean;
+  openCodeAddress: string;
   copied: boolean;
   startOpenCode: () => void;
   stopOpenCode: () => void;
@@ -680,8 +752,8 @@ function TerminalMode({
           <strong>Termux</strong>
           <span>可能位于 Termux，也可能已进入 Ubuntu</span>
         </div>
-        <button className="secondary-button" type="button" onClick={onOpenMaintainer}>
-          维护器
+        <button className="icon-button terminal-menu-button" type="button" aria-label="打开预览菜单" onClick={onOpenMaintainer}>
+          <Menu size={19} />
         </button>
       </div>
       <button className="terminal-side-handle" type="button" aria-label="打开终端列表" onClick={() => setSessionDrawerOpen(true)}>
@@ -705,6 +777,9 @@ function TerminalMode({
         <span className="terminal-line">$ cd ~</span>
         <span className="terminal-line">$ proot-distro login ubuntu --user root --shared-tmp</span>
         <span className="terminal-line">root@ubuntu:~# {toolbarPageIndex === 1 ? "claude --continue" : ""}</span>
+        {showSmallTerminalHints && (
+          <span className="terminal-hint-line">提示：底部 Ubuntu 进入 /root，exit 退出当前会话；OpenCode Web 地址 {openCodeAddress}</span>
+        )}
         <span className="terminal-cursor"> </span>
       </pre>
       <div className="terminal-toolbar-wrap">
@@ -767,6 +842,7 @@ function TerminalMode({
           saveDeepseekKey={saveDeepseekKey}
           configureDeepseek={configureDeepseek}
           openCodeStarted={openCodeStarted}
+          openCodeAddress={openCodeAddress}
           copied={copied}
           startOpenCode={startOpenCode}
           stopOpenCode={stopOpenCode}
@@ -805,6 +881,7 @@ function TerminalInitGuide(props: {
   saveDeepseekKey: () => void;
   configureDeepseek: () => void;
   openCodeStarted: boolean;
+  openCodeAddress: string;
   copied: boolean;
   startOpenCode: () => void;
   stopOpenCode: () => void;
@@ -818,6 +895,7 @@ function TerminalInitGuide(props: {
   const keyStepReady = (props.keyReady && props.deepseekKeySaved) || props.deepseekKeySkipped;
   const deepseekStepReady = props.deepseekConfigured || props.deepseekConfigSkipped;
   const allDone = batteryReady && props.initDone && keyStepReady && deepseekStepReady;
+  const openCodePort = props.openCodeAddress.split(":").pop() || "4096";
   const stepOrder: OnboardingStep[] = ["permission", "install", "readingGuide", "deepseekKey", "waitingInstall", "configureDeepseek", "launchConfig"];
   const stepLabels: Record<OnboardingStep, string> = {
     permission: "后台权限",
@@ -1056,13 +1134,13 @@ function TerminalInitGuide(props: {
               </div>
               <div className="onboarding-path-card">
                 <span>OpenCode Web 端口</span>
-                <code>4096</code>
+                <code>{openCodePort}</code>
               </div>
             </div>
 
             <div className="onboarding-status-card">
               <strong>{props.openCodeStarted ? "OpenCode 运行中" : "OpenCode 未启动"}</strong>
-              <span>访问地址：http://127.0.0.1:4096</span>
+              <span>访问地址：{props.openCodeAddress}</span>
             </div>
 
             <div className="onboarding-service-actions">
@@ -1285,7 +1363,7 @@ function TerminalShortcutsScreen() {
           第 1 页适合放短按键和参数片段，例如先点 `claude`，再点 `--continue`，也可以直接切到第 2 页点完整的 `claude --continue`。
         </p>
         <p>
-          按键支持自定义和多页。用户可以让 AI 修改配置，例如“把第三排改成我的常用命令”，维护器会把名称和发送到终端的语句一起更新。
+          按键支持自定义和多页。用户可以让 AI 修改配置，例如“把第三排改成我的常用命令”，配置会把名称和发送到终端的语句一起更新。
         </p>
       </section>
     </div>
@@ -1396,7 +1474,11 @@ function MainScreen(props: {
   deepseekConfigSkipped: boolean;
   currentStep: string;
   openCodeStarted: boolean;
+  openCodeAddress: string;
   batteryOptimizationIgnored: boolean;
+  batteryOptimizationSkipped: boolean;
+  fileStoragePermissionGranted: boolean;
+  overlayPermissionGranted: boolean;
   setupComplete: boolean;
   launchConfigConfirmed: boolean;
   resetPreview: () => void;
@@ -1406,38 +1488,23 @@ function MainScreen(props: {
 }) {
   const keyStatus = props.deepseekKeySkipped ? "已跳过" : props.deepseekKeySaved ? "已保存" : props.keyReady ? "已填写未保存" : "待保存";
   const configStatus = props.deepseekConfigSkipped ? "已跳过" : props.deepseekConfigured ? "已配置" : props.deepseekKeySaved ? "待配置" : "等待 Key";
+  const permissionReady =
+    (props.batteryOptimizationIgnored || props.batteryOptimizationSkipped) &&
+    props.fileStoragePermissionGranted &&
+    props.overlayPermissionGranted;
 
   return (
     <div className="stack">
-      <div className="status-strip">
-        <StatusPill label="存储权限" value="已授权" tone="ok" />
-        <StatusPill
-          label="电池优化"
-          value={props.batteryOptimizationIgnored ? "已忽略" : "待授权"}
-          tone={props.batteryOptimizationIgnored ? "ok" : "warn"}
-        />
-        <StatusPill label="安装" value={stateLabel(props.initState)} tone={props.initDone ? "ok" : "plain"} />
-        <StatusPill label="Key" value={keyStatus} tone={props.deepseekKeySaved ? "ok" : props.deepseekKeySkipped ? "plain" : "warn"} />
-        <StatusPill label="配置" value={configStatus} tone={props.deepseekConfigured ? "ok" : props.deepseekConfigSkipped ? "plain" : "warn"} />
-      </div>
-
       <section className="panel primary-panel">
         <div className="panel-title-row">
           <div>
-            <h1>初始化安装和配置</h1>
-            <p>主流程现在统一在终端向导中完成；这里仅展示当前阶段摘要，避免两套入口互相冲突。</p>
+            <h1>OpenHouseAI</h1>
+            <p>当前阶段：{onboardingStepDescription(props.onboardingStep)}</p>
           </div>
           <span className={`state-badge ${props.setupComplete ? "done" : props.initState}`}>
-            {props.setupComplete ? "待进入终端" : onboardingStepLabel(props.onboardingStep)}
+            {props.setupComplete ? "已就绪" : onboardingStepLabel(props.onboardingStep)}
           </span>
         </div>
-
-        <button className="action-button" type="button" onClick={props.returnToTerminal}>
-          <Terminal size={19} />
-          <span>
-            {props.setupComplete ? "回到终端" : "打开终端向导"}
-          </span>
-        </button>
 
         <div className="progress-block">
           <div className="progress-meta">
@@ -1451,68 +1518,181 @@ function MainScreen(props: {
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-title-row compact">
-          <div>
-            <h2>当前向导阶段</h2>
-            <p>{onboardingStepDescription(props.onboardingStep)}</p>
-          </div>
-          <ChevronRight size={18} />
-        </div>
-        <div className="info-list">
-          {[
-            ["后台权限", props.batteryOptimizationIgnored ? "已允许忽略电池优化" : "等待授权"],
-            ["初始化安装", props.initDone ? "安装完成" : props.initState === "running" ? `进行中，${props.progress}%` : "尚未开始"],
-            ["DeepSeek Key", keyStatus],
-            ["AI 工具配置", configStatus],
-            ["OpenCode", props.openCodeStarted ? "运行中，http://127.0.0.1:4096" : "待手动启动"]
-          ].map(([label, value], index) => (
-            <div className="info-row" key={label}>
-              <span>{index + 1}</span>
-              <p>
-                <strong>{label}</strong>：{value}
-              </p>
-            </div>
-          ))}
-        </div>
-      </section>
+      <div className="status-strip concise">
+        <StatusPill label="权限" value={permissionReady ? "已处理" : "待处理"} tone={permissionReady ? "ok" : "warn"} />
+        <StatusPill label="安装" value={stateLabel(props.initState)} tone={props.initDone ? "ok" : "plain"} />
+        <StatusPill label="Key" value={keyStatus} tone={props.deepseekKeySaved ? "ok" : props.deepseekKeySkipped ? "plain" : "warn"} />
+        <StatusPill label="配置" value={configStatus} tone={props.deepseekConfigured ? "ok" : props.deepseekConfigSkipped ? "plain" : "warn"} />
+      </div>
 
-      <section className="panel launch-panel">
+      <section className="panel home-actions-panel">
         <div>
-          <h2>启动配置摘要</h2>
-          <p>最终启动配置只在终端向导的启动配置屏操作。</p>
+          <h2>常用入口</h2>
+          <p>OpenCode：{props.openCodeStarted ? props.openCodeAddress : "未启动"}</p>
         </div>
-        <div className="onboarding-config-grid">
-          <div className="onboarding-path-card">
-            <span>OpenCode 目录</span>
-            <code>/root</code>
-          </div>
-          <div className="onboarding-path-card">
-            <span>端口</span>
-            <code>4096</code>
-          </div>
-        </div>
-        <div className="tutorial-start-actions">
-          <button
-            className="secondary-button"
-            type="button"
-            disabled={!props.setupComplete || !props.launchConfigConfirmed}
-            onClick={props.startTerminalTutorial}
-          >
+        <div className="home-action-grid">
+          <button className="action-button no-margin" type="button" onClick={props.returnToTerminal}>
+            <Terminal size={18} />
+            {props.setupComplete ? "回到终端" : "打开终端向导"}
+          </button>
+          <button className="secondary-button" type="button" disabled={!props.setupComplete || !props.launchConfigConfirmed} onClick={props.startTerminalTutorial}>
             <Play size={18} />
-            {!props.setupComplete
-              ? "先完成向导"
-              : !props.launchConfigConfirmed
-                ? "先确认启动配置"
-                : props.terminalTutorialSeen
-                  ? "重新观看教学"
-                  : "开始教学"}
+            {props.terminalTutorialSeen ? "重看教学" : "终端教学"}
           </button>
           <button className="secondary-button" type="button" onClick={props.resetPreview}>
             <RotateCcw size={17} />
-            重置预览状态
+            重置状态
           </button>
         </div>
+      </section>
+    </div>
+  );
+}
+
+function PermissionsScreen(props: {
+  batteryOptimizationIgnored: boolean;
+  batteryOptimizationSkipped: boolean;
+  fileStoragePermissionGranted: boolean;
+  overlayPermissionGranted: boolean;
+  confirmBatteryIgnored: () => void;
+  grantFileStoragePermission: () => void;
+  grantOverlayPermission: () => void;
+}) {
+  const batteryReady = props.batteryOptimizationIgnored || props.batteryOptimizationSkipped;
+  const permissionRows = [
+    {
+      title: "忽略电池优化",
+      detail: "允许后台下载 Ubuntu、安装 OpenCode 和写入配置，避免息屏后初始化中断。",
+      state: batteryReady ? (props.batteryOptimizationSkipped ? "已跳过检测" : "已允许") : "待授权",
+      ready: batteryReady,
+      action: "预览：已允许",
+      onClick: props.confirmBatteryIgnored
+    },
+    {
+      title: "文件 / 存储权限",
+      detail: "用于保存脚本、日志、项目文件和下载包；APK 目标页会引导到系统权限。",
+      state: props.fileStoragePermissionGranted ? "已授权" : "待授权",
+      ready: props.fileStoragePermissionGranted,
+      action: "预览：已授权",
+      onClick: props.grantFileStoragePermission
+    },
+    {
+      title: "悬浮窗权限",
+      detail: "用于终端辅助入口和前台提示；不影响核心安装，但会影响部分浮层操作。",
+      state: props.overlayPermissionGranted ? "已授权" : "待授权",
+      ready: props.overlayPermissionGranted,
+      action: "预览：已授权",
+      onClick: props.grantOverlayPermission
+    }
+  ];
+
+  return (
+    <div className="stack">
+      <section className="panel">
+        <h2>权限获取</h2>
+        <p className="muted">这里只模拟 APK 的系统授权入口，真实设备会跳到对应 Android 设置页。</p>
+      </section>
+
+      <div className="permission-card-list">
+        {permissionRows.map((item) => (
+          <section className={`permission-card ${item.ready ? "ready" : ""}`} key={item.title}>
+            <div>
+              <ShieldCheck size={20} />
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.detail}</p>
+              </div>
+            </div>
+            <div className="permission-card-actions">
+              <span>{item.state}</span>
+              <button className="secondary-button" type="button" disabled={item.ready} onClick={item.onClick}>
+                {item.ready ? "已完成" : item.action}
+              </button>
+            </div>
+          </section>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DeepSeekKeyReplacementScreen(props: {
+  deepseekKey: string;
+  keyReady: boolean;
+  deepseekKeySaved: boolean;
+  deepseekConfigured: boolean;
+  initDone: boolean;
+  setDeepseekKey: (value: string) => void;
+  saveDeepseekKey: () => void;
+  configureDeepseek: () => void;
+}) {
+  const [targets, setTargets] = useState({
+    opencode: true,
+    claude: true,
+    reasonix: true,
+    codex: false
+  });
+  const selectedTargetCount = Object.values(targets).filter(Boolean).length;
+  const targetRows = [
+    ["opencode", "OpenCode", "Web 与终端入口默认写入 DeepSeek。"],
+    ["claude", "Claude Code", "用于终端里的 claude 会话。"],
+    ["reasonix", "Reasonix", "作为 DeepSeek 适配兜底工具。"],
+    ["codex", "Codex", "默认不选；可后续使用官方登录或让 AI 协助接入。"]
+  ] as const;
+
+  function toggleTarget(target: keyof typeof targets) {
+    setTargets((value) => ({ ...value, [target]: !value[target] }));
+  }
+
+  return (
+    <div className="stack">
+      <section className="panel key-panel">
+        <div>
+          <h2>DeepSeek Key 替换</h2>
+          <p className="muted">粘贴新 Key 后先保存，再写入默认选择的 AI 工具。</p>
+        </div>
+        <label className="key-input">
+          <span>DeepSeek API Key</span>
+          <input value={props.deepseekKey} onChange={(event) => props.setDeepseekKey(event.target.value)} placeholder="sk-..." type="password" />
+        </label>
+        <div className="onboarding-field-actions">
+          <span>{props.deepseekKeySaved ? "当前 Key 已保存。" : props.keyReady ? "Key 可保存。" : "至少输入 8 个字符。"}</span>
+          <button className="action-button no-margin" type="button" disabled={!props.keyReady} onClick={props.saveDeepseekKey}>
+            <CheckCircle2 size={18} />
+            保存 Key
+          </button>
+        </div>
+      </section>
+
+      <section className="panel target-tool-panel">
+        <div className="panel-title-row compact">
+          <div>
+            <h2>替换目标</h2>
+            <p>默认选中 OpenCode、Claude Code 和 Reasonix。</p>
+          </div>
+          <span className="state-badge done">{selectedTargetCount} 项</span>
+        </div>
+        <div className="target-tool-list">
+          {targetRows.map(([id, title, detail]) => (
+            <label className="target-tool-row" key={id}>
+              <input checked={targets[id]} onChange={() => toggleTarget(id)} type="checkbox" />
+              <span>
+                <strong>{title}</strong>
+                <small>{detail}</small>
+              </span>
+            </label>
+          ))}
+        </div>
+        <button
+          className="action-button no-margin"
+          type="button"
+          disabled={!props.initDone || !props.deepseekKeySaved || selectedTargetCount === 0}
+          onClick={props.configureDeepseek}
+        >
+          <KeyRound size={18} />
+          {props.deepseekConfigured ? "重新写入配置" : "写入所选工具"}
+        </button>
+        {!props.initDone && <p className="muted">初始化安装完成后才能写入工具配置。</p>}
       </section>
     </div>
   );
@@ -1521,39 +1701,67 @@ function MainScreen(props: {
 function ManualScreen() {
   const manualSections = [
     {
-      title: "1. 终端使用入门",
-      summary: "简要学习 Termux / Ubuntu 终端、多终端侧边栏和底部三排快捷键。",
-      points: ["回到终端后可能位于 Termux，也可能已进入 Ubuntu。", "左侧可以拉出多个终端列表，新建和切换会话。", "底部前两排是基础键，第三排是 AI 快捷键。"]
+      title: "1. 安装期间建议阅读",
+      summary: "第一次初始化会下载 Ubuntu 和 AI 工具，通常需要 10 分钟到半小时。",
+      points: [
+        "安装开始后可以先阅读本手册，不需要盯着进度条。",
+        "建议先准备 DeepSeek API Key，后续可在“DeepSeek Key 替换”中粘贴保存。",
+        "如果系统限制后台运行，先去“权限获取”处理电池优化、存储和悬浮窗权限。"
+      ]
     },
     {
-      title: "2. AI 软件总览",
-      summary: "Claude Code、Codex、Reasonix、OpenCode 都是可用入口，DeepSeek Key 会自动配置。",
-      points: ["OpenHouseAI 的特点是可接入的模型和 AI 编程工具较广。", "普通用户优先通过快捷键或 OpenCode Web 使用，不需要手敲命令。"]
+      title: "2. Termux 和 Ubuntu 的区别",
+      summary: "Termux 是 Android 上的终端外壳，Ubuntu 是安装在里面的 Linux 工作环境。",
+      points: [
+        "看到 `$` 时通常还在 Termux；看到 `root@ubuntu:~#` 时已经进入 Ubuntu。",
+        "AI 编程工具主要安装在 Ubuntu 的 `/root` 下，项目也优先放在 `/root`。",
+        "底部 Ubuntu 键会进入 Ubuntu，exit 会退出当前 shell 或回到上一层环境。"
+      ]
     },
     {
-      title: "3. Claude Code 详细介绍",
-      summary: "适合持续对话式改代码、解释项目、修复报错。",
-      points: ["第三排可点 claude 和 --continue。", "第二页提供完整 claude --continue。", "常用语句可做成快捷键。"]
+      title: "3. 终端 AI 使用",
+      summary: "Claude Code、Codex、Reasonix 都可以从终端或底部 AI 快捷键启动。",
+      points: [
+        "第三排常用页可点 claude、codex、reasonix 或 oc。",
+        "继续页提供 claude --continue、Codex 继续、Reasonix 分析等完整命令。",
+        "适合在终端里让 AI 修复报错、解释项目、写测试和检查改动。"
+      ]
     },
     {
-      title: "4. Codex 详细介绍",
-      summary: "适合实现功能、检查改动、跑测试和整理提交。",
-      points: ["可通过 codex 快捷键启动。", "可让 Codex 继续当前任务或 review 当前改动。"]
+      title: "4. OpenCode Web 使用",
+      summary: "OpenCode 提供浏览器界面，适合不想长期盯着终端的用户。",
+      points: [
+        "从侧边栏进入“OpenCode 控制”，启动服务后复制或打开地址。",
+        "第一次新增项目时填写 `/root`，不要把端口 4096 当成项目路径。",
+        "如果改了端口，使用“OpenCode 控制”里显示的新 URL。"
+      ]
     },
     {
-      title: "5. Reasonix 详细介绍",
-      summary: "适合方案审查、原因分析、风险检查和多方案比较。",
-      points: ["可通过 reasonix 快捷键启动。", "适合在修改前后做推理和验证。"]
+      title: "5. 底部工具栏按键",
+      summary: "底部快捷键保留 Termux 基础键，并增加 AI 命令页。",
+      points: [
+        "ESC、TAB、CTRL、ALT 和方向键用于补全、组合键和移动光标。",
+        "键盘用于唤起输入法；Termux 回到 Termux；Ubuntu 进入 Ubuntu /root。",
+        "exit 退出当前会话，clear 清屏。"
+      ]
     },
     {
-      title: "6. 其他 Agent 与模型接入",
-      summary: "保留后续扩展位置，用于说明更多模型、API Key 和工具接入方式。",
-      points: ["当前主线先配置 DeepSeek Key。", "后续可以把更多模型或 Agent 的配置说明放到在线手册。"]
+      title: "6. DeepSeek Key 和 AI 工具",
+      summary: "DeepSeek Key 用于让 OpenCode、Claude Code、Reasonix 等工具调用模型。",
+      points: [
+        "可以在初始化时保存，也可以之后进入“DeepSeek Key 替换”重新粘贴。",
+        "默认替换目标包含 OpenCode、Claude Code 和 Reasonix。",
+        "Codex 可继续使用官方登录或后续让 AI 协助接入其他模型。"
+      ]
     },
     {
-      title: "7. OpenCode Web",
-      summary: "OpenCode 原生提供网页访问，适合在浏览器里使用 AI 编程环境。",
-      points: ["新增项目时一开始填写 /root。", "默认地址是 http://127.0.0.1:4096。", "4096 是端口，不是项目路径。"]
+      title: "7. 由 AI 帮你自定义",
+      summary: "安装完成后，可以让 AI 帮你调整快捷键、工具配置和常用命令。",
+      points: [
+        "例如让 AI 把第三排改成你的常用命令，并同时更新按钮名称和发送内容。",
+        "也可以让 OpenCode、Claude Code 或 Reasonix 协助配置更多 Agent。",
+        "高级设置只放少量开关，具体自定义优先让 AI 直接改配置。"
+      ]
     }
   ];
 
@@ -1603,19 +1811,29 @@ function OpenCodeControlScreen(props: {
   deepseekConfigured: boolean;
   launchConfigConfirmed: boolean;
   openCodeStarted: boolean;
+  openCodePort: string;
+  openCodeAddress: string;
+  browserOpened: boolean;
   copied: boolean;
+  setOpenCodePort: (value: string) => void;
   startOpenCode: () => void;
   stopOpenCode: () => void;
   copyAddress: () => void;
+  openBrowserPreview: () => void;
 }) {
-  const ready = props.initDone && props.launchConfigConfirmed;
+  const ready = props.initDone;
+  const configLabel = props.deepseekConfigured ? "模型已配置" : props.keySaved ? "Key 已保存，待写入" : "可先启动后在 Web 配置模型";
+
+  function updatePort(value: string) {
+    props.setOpenCodePort(value.replace(/\D/g, "").slice(0, 5));
+  }
 
   return (
     <div className="stack">
       <section className="panel opencode-control-hero">
         <div>
           <h2>OpenCode 控制</h2>
-          <p>这里集中控制 OpenCode Web 服务；未配置 DeepSeek 或未确认启动配置前保持锁定。</p>
+          <p>启动、停止和查看 OpenCode Web 地址。默认在 Ubuntu 的 `/root` 目录运行。</p>
         </div>
         <span className={`service-status ${props.openCodeStarted ? "running" : ""}`}>
           {props.openCodeStarted ? "运行中" : "未启动"}
@@ -1623,10 +1841,20 @@ function OpenCodeControlScreen(props: {
       </section>
 
       <section className="panel opencode-control-panel">
+        <div className="onboarding-config-grid">
+          <label>
+            <span>端口</span>
+            <input value={props.openCodePort} onChange={(event) => updatePort(event.target.value)} inputMode="numeric" placeholder="4096" />
+          </label>
+          <div className="onboarding-path-card">
+            <span>启动目录</span>
+            <code>/root</code>
+          </div>
+        </div>
         <div className="opencode-control-grid">
           <button className="action-button no-margin" type="button" disabled={!ready} onClick={props.startOpenCode}>
             <Play size={18} />
-            启动
+            {props.openCodePort === "4096" ? "启动" : "用此端口启动"}
           </button>
           <button className="secondary-button" type="button" disabled={!ready || !props.openCodeStarted} onClick={props.startOpenCode}>
             <RotateCcw size={17} />
@@ -1641,15 +1869,23 @@ function OpenCodeControlScreen(props: {
             {props.copied ? "已复制" : "复制地址"}
           </button>
         </div>
-        <code className={props.openCodeStarted ? "address ready" : "address"}>http://127.0.0.1:4096</code>
+        <div className="copy-url-box">
+          <span>访问地址</span>
+          <code className={props.openCodeStarted ? "address ready" : "address"}>{props.openCodeAddress}</code>
+          <button className="secondary-button" type="button" disabled={!ready || !props.openCodeStarted} onClick={props.openBrowserPreview}>
+            <ChevronRight size={17} />
+            浏览器打开
+          </button>
+        </div>
       </section>
 
       <div className="info-list">
         {[
-          "OpenCode 会在 Ubuntu 的 `/root` 目录启动。",
+          `模型状态：${configLabel}。`,
+          props.launchConfigConfirmed ? "启动配置已确认。" : "未确认启动配置时也可预览控制入口，真实流程会先走终端向导。",
           "新增项目时一开始填写 `/root`。",
           "停止只关闭 OpenCode Web 服务，不会删除 Ubuntu 或用户项目。",
-          "运行时不使用代理；端口默认是 4096。"
+          `运行时不使用代理；当前端口是 ${props.openCodePort || "4096"}。`
         ].map((item, index) => (
           <div className="info-row" key={item}>
             <span>{index + 1}</span>
@@ -1657,6 +1893,20 @@ function OpenCodeControlScreen(props: {
           </div>
         ))}
       </div>
+
+      {props.browserOpened && (
+        <section className="browser-preview" aria-label="浏览器打开模拟">
+          <div className="browser-preview-bar">
+            <span />
+            <code>{props.openCodeAddress}</code>
+          </div>
+          <div className="browser-preview-body">
+            <strong>OpenCode</strong>
+            <p>项目路径：/root</p>
+            <p>这里模拟从 APK 调起浏览器后的 Web 页面。</p>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -1694,15 +1944,26 @@ function LogsScreen() {
   );
 }
 
-function AdvancedScreen() {
+function AdvancedScreen(props: {
+  openCodePort: string;
+  showSmallTerminalHints: boolean;
+  setShowSmallTerminalHints: (value: boolean) => void;
+}) {
   return (
     <div className="stack">
       <section className="panel">
         <h2>高级设置</h2>
         <p className="muted">保留给调试和安装器参数确认，默认值面向普通用户。</p>
       </section>
+      <label className="setting-toggle">
+        <span>
+          <strong>终端小字提示</strong>
+          <small>在终端输出区显示 Ubuntu、exit 和 OpenCode 地址提示。</small>
+        </span>
+        <input checked={props.showSmallTerminalHints} onChange={(event) => props.setShowSmallTerminalHints(event.target.checked)} type="checkbox" />
+      </label>
       {[
-        ["OpenCode 端口", "4096"],
+        ["OpenCode 端口", props.openCodePort || "4096"],
         ["启动目录", "/root"],
         ["运行时代理", "不使用"],
         ["在线手册地址", "https://jiwuyou.github.io/openhouseai-docs/"],
