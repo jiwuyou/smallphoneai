@@ -28,6 +28,7 @@ type SectionId =
   | "manual"
   | "keyReplacement"
   | "opencodeControl"
+  | "about"
   | "terminalGuide"
   | "shortcuts"
   | "repair"
@@ -49,6 +50,7 @@ const sections: Array<{ id: SectionId; label: string; icon: typeof Activity }> =
   { id: "opencodeControl", label: "OpenCode 控制", icon: Play },
   { id: "keyReplacement", label: "DeepSeek Key 替换", icon: KeyRound },
   { id: "permissions", label: "权限获取", icon: ShieldCheck },
+  { id: "about", label: "软件说明", icon: Bot },
   { id: "terminalGuide", label: "终端教学", icon: Terminal },
   { id: "shortcuts", label: "终端快捷键", icon: Keyboard },
   { id: "repair", label: "维护与修复", icon: Wrench },
@@ -398,7 +400,7 @@ function App() {
 
   return (
     <div className="preview-shell">
-      <main className="phone-frame" aria-label="OpenHouseAI Android App 预览">
+      <main className="phone-frame" aria-label="openhouse ai Android App 预览">
         <div className="android-status">
           <span>10:24</span>
           <span>5G  82%</span>
@@ -450,7 +452,7 @@ function App() {
             <Menu size={20} />
           </button>
           <div>
-            <strong>OpenHouseAI</strong>
+            <strong>openhouse ai</strong>
             <span>{sectionTitle}</span>
           </div>
           <button className="icon-button" type="button" aria-label="高级设置" onClick={() => selectSection("advanced")}>
@@ -463,7 +465,7 @@ function App() {
         <aside className={`drawer ${sidebarOpen ? "open" : ""}`} aria-label="侧边栏">
           <div className="drawer-head">
             <div>
-              <strong>OpenHouseAI</strong>
+              <strong>openhouse ai</strong>
               <span>APK UI 预览</span>
             </div>
             <button className="icon-button" type="button" aria-label="关闭侧边栏" onClick={() => setSidebarOpen(false)}>
@@ -535,6 +537,7 @@ function App() {
               grantOverlayPermission={() => setOverlayPermissionGranted(true)}
             />
           )}
+          {section === "about" && <AboutScreen />}
           {section === "manual" && <ManualScreen />}
           {section === "keyReplacement" && (
             <DeepSeekKeyReplacementScreen
@@ -778,7 +781,9 @@ function TerminalMode({
         <span className="terminal-line">$ proot-distro login ubuntu --user root --shared-tmp</span>
         <span className="terminal-line">root@ubuntu:~# {toolbarPageIndex === 1 ? "claude --continue" : ""}</span>
         {showSmallTerminalHints && (
-          <span className="terminal-hint-line">提示：底部 Ubuntu 进入 /root，exit 退出当前会话；OpenCode Web 地址 {openCodeAddress}</span>
+          <span className="terminal-hint-line">
+            提示：底部 Ubuntu 进入 /root，exit 退出当前会话；OpenCode Web 地址 {openCodeAddress}。这行小字可以在菜单的高级设置中关闭。
+          </span>
         )}
         <span className="terminal-cursor"> </span>
       </pre>
@@ -796,6 +801,7 @@ function TerminalMode({
           ))}
         </div>
         <TerminalExtraKeysToolbar rows={rows} compact highlightLabels={highlightedKeys} />
+        <div className="terminal-toolbar-reserved-space" aria-hidden="true" />
       </div>
       {activeTutorial && (
         <div className="terminal-tutorial-layer">
@@ -1212,7 +1218,7 @@ function TerminalInitGuide(props: {
             <div className="guide-steps">
               <div>
                 <span>1</span>
-                <p>选择 OpenHouseAI / Termux。</p>
+                <p>选择 openhouse ai / Termux。</p>
               </div>
               <div>
                 <span>2</span>
@@ -1252,20 +1258,20 @@ function InstallReadingGuide({ compact = false, openByDefault = false }: { compa
         </section>
         <section>
           <h3>这款软件会做什么</h3>
-          <p>OpenHouseAI 会帮你配置一套顶级 AI 编程环境。它到底能做什么，取决于你想让它帮你做什么。</p>
+          <p>openhouse ai 会帮你配置一套顶级 AI 编程环境。它到底能做什么，取决于你想让它帮你做什么。</p>
         </section>
         <section>
           <h3>为什么需要 DeepSeek Key</h3>
           <p>AI Agent 运行时通常都需要模型 API。没有可用 API，软件可以启动，但 AI 不能正常调用模型完成任务。</p>
           <p>这里推荐 DeepSeek，是因为它相对实惠，适合作为第一次安装和配置的统一引导。</p>
-          <p>OpenHouseAI 不限制你长期使用哪一个 API。后续可以让 OpenCode、Claude Code 或 Reasonix 帮你配置自己的模型 API。</p>
+          <p>openhouse ai 不限制你长期使用哪一个 API。后续可以让 OpenCode、Claude Code 或 Reasonix 帮你配置自己的模型 API。</p>
         </section>
         <section>
           <h3>DeepSeek Key 怎么拿</h3>
           <p>
             初始化开始后，可以点击申请 Key 跳转到 DeepSeek 官方网站。你可以先充值 5 元，或者 1 元也可以；然后进入 API Keys，创建 API Key，名称可以随便填，比如 op。
           </p>
-          <p>创建后复制 Key，回到 OpenHouseAI，点击“填写 Key”并粘贴。后台会在后续步骤中把这个 Key 配置到 OpenCode、Claude Code 和 Reasonix。</p>
+          <p>创建后复制 Key，回到 openhouse ai，点击“填写 Key”并粘贴。后台会在后续步骤中把这个 Key 配置到 OpenCode、Claude Code 和 Reasonix。</p>
         </section>
         <section>
           <h3>为什么是这几个 AI Agent</h3>
@@ -1283,7 +1289,7 @@ function InstallReadingGuide({ compact = false, openByDefault = false }: { compa
         </section>
         <section>
           <h3>关于 Key 和官方登录</h3>
-          <p>不建议把 API Key 直接发到聊天里。这里的预期方式是由 OpenHouseAI 保存 Key，并自动写入对应工具配置。</p>
+          <p>不建议把 API Key 直接发到聊天里。这里的预期方式是由 openhouse ai 保存 Key，并自动写入对应工具配置。</p>
           <p>Codex 和 Claude Code 的官方登录也支持，但需要你所在地区支持使用。具体登录方式可以继续询问 AI。</p>
           <p>如果使用中转站 API，也可以让 OpenCode、Claude Code 或 Reasonix 帮你把它接入 Codex，或者使用官方 GPT 账号登录。</p>
         </section>
@@ -1498,7 +1504,7 @@ function MainScreen(props: {
       <section className="panel primary-panel">
         <div className="panel-title-row">
           <div>
-            <h1>OpenHouseAI</h1>
+            <h1>openhouse ai</h1>
             <p>当前阶段：{onboardingStepDescription(props.onboardingStep)}</p>
           </div>
           <span className={`state-badge ${props.setupComplete ? "done" : props.initState}`}>
@@ -1533,7 +1539,7 @@ function MainScreen(props: {
         <div className="home-action-grid">
           <button className="action-button no-margin" type="button" onClick={props.returnToTerminal}>
             <Terminal size={18} />
-            {props.setupComplete ? "回到终端" : "打开终端向导"}
+            {props.setupComplete ? "退出菜单，回到终端" : "退出菜单，打开终端向导"}
           </button>
           <button className="secondary-button" type="button" disabled={!props.setupComplete || !props.launchConfigConfirmed} onClick={props.startTerminalTutorial}>
             <Play size={18} />
@@ -1570,7 +1576,7 @@ function PermissionsScreen(props: {
     },
     {
       title: "文件 / 存储权限",
-      detail: "用于保存脚本、日志、项目文件和下载包；APK 目标页会引导到系统权限。",
+      detail: "用于保存脚本、日志、项目文件和下载包；APK 会先尝试直接请求，无法直接弹出时再进入系统权限。",
       state: props.fileStoragePermissionGranted ? "已授权" : "待授权",
       ready: props.fileStoragePermissionGranted,
       action: "预览：已授权",
@@ -1578,7 +1584,7 @@ function PermissionsScreen(props: {
     },
     {
       title: "悬浮窗权限",
-      detail: "用于终端辅助入口和前台提示；不影响核心安装，但会影响部分浮层操作。",
+      detail: "用于终端辅助入口和前台提示；Android 只能进入系统授权页手动开启。",
       state: props.overlayPermissionGranted ? "已授权" : "待授权",
       ready: props.overlayPermissionGranted,
       action: "预览：已授权",
@@ -1590,7 +1596,7 @@ function PermissionsScreen(props: {
     <div className="stack">
       <section className="panel">
         <h2>权限获取</h2>
-        <p className="muted">这里只模拟 APK 的系统授权入口，真实设备会跳到对应 Android 设置页。</p>
+        <p className="muted">电池优化会直接请求系统授权；文件权限会先尝试直接请求，失败后进入设置；悬浮窗和 Android 11 以上所有文件访问只能进入系统授权页。</p>
       </section>
 
       <div className="permission-card-list">
@@ -1690,9 +1696,44 @@ function DeepSeekKeyReplacementScreen(props: {
           onClick={props.configureDeepseek}
         >
           <KeyRound size={18} />
-          {props.deepseekConfigured ? "重新写入配置" : "写入所选工具"}
+          {props.deepseekConfigured ? "重新保存并替换配置" : "保存并替换配置"}
         </button>
         {!props.initDone && <p className="muted">初始化安装完成后才能写入工具配置。</p>}
+      </section>
+
+      <section className="panel">
+        <h2>替换后怎么生效</h2>
+        <p className="muted">
+          替换 Key 后，需要重启 Claude 或重新进入 Ubuntu 终端，正在运行的 AI 会话不会立即切换 Key。回到终端后，点击底部
+          exit，直到最低行看不到 root；然后点击 Ubuntu，就会在当前终端重新进入 Ubuntu 并加载新配置。也可以直接关闭软件后重新进入。
+        </p>
+      </section>
+    </div>
+  );
+}
+
+function AboutScreen() {
+  return (
+    <div className="stack">
+      <section className="panel">
+        <h2>openhouse ai</h2>
+        <p className="muted">openhouse ai 是开源项目，源码和预览页面会持续同步。</p>
+      </section>
+      <section className="panel">
+        <h2>源码地址</h2>
+        <p className="muted">GitHub: https://github.com/jiwuyou/openhouseai-app</p>
+        <button className="secondary-button no-margin" type="button">
+          <Copy size={18} />
+          复制源码地址
+        </button>
+      </section>
+      <section className="panel">
+        <h2>QQ 交流群</h2>
+        <p className="muted">群号：538735275</p>
+        <button className="secondary-button no-margin" type="button">
+          <Copy size={18} />
+          复制 QQ 群号
+        </button>
       </section>
     </div>
   );
