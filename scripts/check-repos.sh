@@ -1,6 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
+root="${1:-/root/projects/smallphoneai}"
 missing=0
 
 check_repo() {
@@ -15,8 +16,9 @@ check_repo() {
   fi
 }
 
-check_repo /root/projects/openhouseai
-check_repo /root/projects/openhouseai/openhouseai-bootstrap
-check_repo /root/projects/openhouseai/openhouseai-app
+check_repo "$root"
+check_repo "$root/openhouseai-bootstrap"
+check_repo "$root/openhouseai-app"
+check_repo "$root/openhouseai-ui-preview"
 
 exit "$missing"

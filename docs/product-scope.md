@@ -1,35 +1,69 @@
 # Product Scope
 
-OpenHouseAI is a minimal agent CLI installer.
+SmallPhoneAI packages SmallPhone as the primary mobile experience and keeps an
+outer OpenHouse maintenance layer for install and recovery.
 
 ## Included
 
 | Component | Purpose |
 | --- | --- |
-| OpenCode | Local AI coding agent CLI and web entry point. |
-| Codex | OpenAI Codex CLI. |
-| Claude Code | Anthropic Claude Code CLI. |
+| SmallPhone | Default app surface opened by the Android host when healthy. |
+| APK-bundled offline payload | First-run source for bootstrap scripts, manifests, pinned runtime components, and required assets that are not guaranteed downloadable. |
+| Outer maintenance drawer | First-run install, recovery, repair, update, logs, and advanced controls. |
+| service-manager | Backend control plane for core services and SmallPhone apps, running in Ubuntu/proot by default. |
+| cc-connect | Bundled bridge for agent connectivity and remote/client handoff. |
+| smallphone-likegirl | Control-test SmallPhone standalone app managed through `service-manager`. |
+| Termux native bootstrap/bridge | Installer, Ubuntu launcher, Android/Termux native bridge, and recovery fallback. |
+| Ubuntu/proot runtime | Primary runtime substrate for `service-manager`, SmallPhone, `cc-connect`, and app services. |
+| Agent toolchain | Tools such as OpenCode, Codex, Claude Code, and Reasonix when required by SmallPhoneAI workflows. |
 
 ## Excluded
 
 | Component | Reason |
 | --- | --- |
-| SmallPhone | Product app stack, outside installer-only scope. |
-| service-manager | Local runtime control plane, not needed for CLI install. |
-| cc-connect | Agent bridge/web client, outside installer-only scope. |
-| cc-proxy | Protocol adapter, outside installer-only scope. |
-| openhouse-key-tool | API key replacement tool, outside installer-only scope. |
-| guide/docs sites | OpenHouse documentation products, outside installer-only scope. |
+| Standalone OpenHouse runtime orchestration | SmallPhoneAI owns only the stack needed to boot, run, and recover SmallPhone. |
+| OpenHouse guide/docs sites as product surfaces | Documentation can be bundled for help, but the default product surface is SmallPhone. |
+| UI-owned process management | Lifecycle actions belong behind `service-manager`, not inside WebView or Android UI widgets. |
+| Remote-only first-run source | GitHub and network endpoints are optional after boot; a clean first run starts from the APK payload. |
+| Broad API key tooling outside SmallPhoneAI | API settings should be scoped to SmallPhoneAI workflows and stored through the approved backend path. |
 
-## Install Shape
+## Offline Packaging
+
+The APK-bundled offline payload is part of product scope. It contains the
+bootstrap manifest and scripts plus pinned artifacts required to install,
+register, start, and health-check the default SmallPhone stack.
+
+First run must use the local APK payload before any remote lookup. GitHub,
+package registries, package mirrors, and other network endpoints are optional
+after boot for update, repair, or refresh flows; they are not the first-run
+source of truth.
+
+If a required asset cannot be legally or practically bundled, the dependent
+feature must be optional or deferred. It cannot block the SmallPhone default
+launch health gate.
+
+## Runtime Shape
 
 ```text
-Termux
-  -> prepare Termux packages
-  -> install Ubuntu through proot-distro when needed
-  -> install Ubuntu base packages
-  -> install OpenCode
-  -> install Codex
-  -> install Claude Code
-```
+Android app
+  -> healthy core stack: open SmallPhone by default
+  -> unhealthy or first run: open outer maintenance drawer
 
+Outer maintenance drawer
+  -> installer/recovery actions
+  -> Termux bootstrap/bridge for Ubuntu startup and fallback repair
+  -> service-manager backend actions when Ubuntu runtime is healthy
+  -> logs and terminal fallback
+
+Termux bootstrap/bridge
+  -> install or enter Ubuntu/proot
+  -> start or repair Ubuntu service-manager
+  -> expose Android/Termux native fallback actions
+
+service-manager in Ubuntu/proot
+  -> core services
+  -> SmallPhone app lifecycle
+  -> cc-connect
+  -> smallphone-likegirl control test
+  -> agent toolchain where needed
+```

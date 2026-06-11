@@ -1,33 +1,55 @@
 # Repository Map
 
-## `/root/projects/openhouseai`
+## `/root/projects/smallphoneai`
 
-Top-level OpenHouseAI coordination workspace.
-
-Current role:
-
-- Define product scope.
-- Track the child repositories for the new product.
-- Provide checks that prevent OpenHouse-only components from entering the new
-  product.
-
-## `/root/projects/openhouseai/openhouseai-bootstrap`
-
-OpenHouseAI installer.
+Top-level SmallPhoneAI coordination workspace.
 
 Current role:
 
-- Prepare Termux.
-- Install or reuse Ubuntu through `proot-distro`.
-- Install base Ubuntu packages required by the agent CLIs.
-- Install OpenCode, Codex, and Claude Code.
+- Define the SmallPhoneAI product contract.
+- Track child repository boundaries.
+- Provide checks for contract text, repository layout, and preview build
+  health.
 
-## `/root/projects/openhouseai/openhouseai-app`
+## `/root/projects/smallphoneai/openhouseai-app`
 
-OpenHouseAI Android/Termux app fork.
+Android/Termux app host. The name is transitional.
+
+Target role:
+
+- Open SmallPhone by default when the core stack is healthy.
+- Show the outer maintenance drawer for first-run install, recovery, repair,
+  update, logs, and advanced controls.
+- Route lifecycle actions to `service-manager` instead of implementing service
+  orchestration in the UI.
+- Use Termux native hooks only for bootstrap, Ubuntu launch, bridge, and
+  recovery fallback.
+- Use terminal access as a fallback, not the default app surface.
+
+## `/root/projects/smallphoneai/openhouseai-bootstrap`
+
+SmallPhoneAI first-run installer and recovery bootstrap. The name is
+transitional.
+
+Target role:
+
+- Prepare Termux and Ubuntu runtime dependencies.
+- Install or repair `service-manager`, `cc-connect`, SmallPhone, and required
+  agent tools.
+- Run primary runtime component actions inside Ubuntu/proot by default.
+- Register service-manager services and health checks.
+- Register `smallphone-likegirl` as the SmallPhone standalone app control-test
+  target on the OpenHouse `23003` app port.
+- Provide resumable first-run and recovery actions for the app.
+- Expose machine-readable `status` and `hooks` commands for launch gating and
+  maintenance UI integration.
+
+## `/root/projects/smallphoneai/openhouseai-ui-preview`
+
+Local product preview.
 
 Current role:
 
-- Provide the APK entry point.
-- Expose maintenance actions for the OpenHouseAI installer scope.
-- Point dynamic maintenance defaults at `openhouseai-bootstrap`.
+- Model the SmallPhone-first launch experience.
+- Model the outer maintenance drawer, first-run/recovery states, and backend
+  control assumptions without touching the Android app repository.

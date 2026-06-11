@@ -1,34 +1,55 @@
-# OpenHouseAI
+# SmallPhoneAI
 
-OpenHouseAI 是一个范围收窄的本地 Agent CLI 安装产品。
+SmallPhoneAI is the Android/Termux product shell for SmallPhone. The app
+should open SmallPhone by default. The outer OpenHouse maintenance surface is a
+recovery and installer layer, not the primary user experience.
 
-这个工作区独立于 OpenHouse，只保留安装和检测以下内容所需的仓库：
-- Ubuntu proot
-- OpenCode
-- Codex CLI
-- Claude Code
+## Product Contract
 
-不在上述范围内的运行时服务、站点、组件和文档构建流程不属于 OpenHouseAI。
+- Default entry: launch the SmallPhone WebView/home surface when the core stack
+  is healthy.
+- First-run path: run the installer, start the core stack, verify health, then
+  hand the user into SmallPhone.
+- Recovery path: if SmallPhone cannot start, keep the user in the outer
+  maintenance drawer with repair, update, logs, and terminal escape hatches.
+- Backend control: `service-manager` is the control plane for core services and
+  SmallPhone apps. UI actions call the backend instead of owning process logic.
+- Runtime placement: the primary runtime stack runs inside the Termux-managed
+  Ubuntu/proot environment. Termux native code remains the installer,
+  bootstrap, bridge, and recovery layer.
+- Included bridge: `cc-connect` is part of the SmallPhoneAI core stack.
 
-## 仓库
+## Repositories
 
-- `openhouseai-bootstrap`：Termux/Ubuntu bootstrap 安装脚本和在线维护清单。
-- `openhouseai-app`：收窄后的 Android/Termux app，维护中心只覆盖 OpenHouseAI 安装范围。
+- `openhouseai-app`: Android/Termux app host. The target behavior is
+  SmallPhone-first launch with an outer maintenance drawer.
+- `openhouseai-bootstrap`: first-run installer and recovery bootstrap. The
+  target behavior is to install or repair the SmallPhoneAI core stack.
+- `openhouseai-ui-preview`: local product preview for the SmallPhone-first
+  shell and maintenance drawer.
 
-## 工作模型
+The `openhouseai-*` directory names are transitional implementation names. The
+top-level product contract is SmallPhoneAI.
 
-实现放在子仓库中。这个根仓库只保留产品范围、仓库边界和检查脚本。
-
-## 检查命令
+## Checks
 
 ```bash
 ./scripts/check-repos.sh
 ./scripts/check-product-scope.sh
+./scripts/smoke-smallphoneai-contract.sh
 ```
 
-Bootstrap 入口：
+Bootstrap handoff:
 
 ```bash
 cd openhouseai-bootstrap
-bash bootstrap.sh full
+bash bootstrap.sh status
+bash bootstrap.sh components
+bash bootstrap.sh start
+```
+
+Preview build:
+
+```bash
+npm --prefix openhouseai-ui-preview run build
 ```
