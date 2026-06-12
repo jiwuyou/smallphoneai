@@ -58,9 +58,9 @@ first-run dependency. The runtime component payload archives live under
 
 | Component | APK asset path |
 | --- | --- |
-| service-manager | `openhouse/product-payloads/service-manager.tar.gz` |
-| cc-connect/openhouse-connect | `openhouse/product-payloads/openhouse-connect.tar.gz` |
-| SmallPhone | `openhouse/product-payloads/smallphone.tar.gz` |
+| service-manager | `openhouse/product-payloads/service-manager.tar` |
+| cc-connect/openhouse-connect | `openhouse/product-payloads/openhouse-connect.tar` |
+| SmallPhone | `openhouse/product-payloads/smallphone.tar` |
 
 Each archive must unpack to a child repo root containing `scripts/install.sh`
 and `scripts/check.sh`. Checksums and versions should be recorded by the

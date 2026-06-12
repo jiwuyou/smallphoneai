@@ -73,9 +73,9 @@ The APK must contain these product payload archives under
 
 | Component | APK asset path | Installed target |
 | --- | --- | --- |
-| service-manager | `openhouse/product-payloads/service-manager.tar.gz` | `$HOME/smallphoneai-repos/service-manager` |
-| cc-connect/openhouse-connect | `openhouse/product-payloads/openhouse-connect.tar.gz` | `$HOME/smallphoneai-repos/openhouse-connect` |
-| SmallPhone | `openhouse/product-payloads/smallphone.tar.gz` | `$HOME/smallphoneai-repos/smallphone-active` |
+| service-manager | `openhouse/product-payloads/service-manager.tar` | `$HOME/smallphoneai-repos/service-manager` |
+| cc-connect/openhouse-connect | `openhouse/product-payloads/openhouse-connect.tar` | `$HOME/smallphoneai-repos/openhouse-connect` |
+| SmallPhone | `openhouse/product-payloads/smallphone.tar` | `$HOME/smallphoneai-repos/smallphone-active` |
 
 Each archive must unpack to a child repo root containing `scripts/install.sh`
 and `scripts/check.sh`; `scripts/register-service.sh` remains optional but is

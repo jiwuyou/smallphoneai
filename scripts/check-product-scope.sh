@@ -82,9 +82,9 @@ require_file openhouseai-bootstrap/scripts/60-start-smallphone.sh
 require_file openhouseai-bootstrap/scripts/65-smallphone-status.sh
 require_file openhouseai-app/app/src/main/assets/smallphoneai/bootstrap/bootstrap.sh
 require_file openhouseai-app/app/src/main/assets/smallphoneai/bootstrap/scripts/50-install-runtime-components.sh
-require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/service-manager.tar.gz
-require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/openhouse-connect.tar.gz
-require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/smallphone.tar.gz
+require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/service-manager.tar
+require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/openhouse-connect.tar
+require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/smallphone.tar
 require_file openhouseai-app/app/src/main/assets/openhouse/product-payloads/payload-manifest.json
 
 require_text README.md 'SmallPhoneAI' 'SmallPhoneAI product name'
@@ -148,9 +148,9 @@ require_text docs/integration-contract.md 'default placement.*Ubuntu/proot|Ubunt
 require_text docs/integration-contract.md 'Termux native layer owns only bootstrap, bridge, and recovery' 'Termux native layer boundary'
 require_text docs/integration-contract.md 'cc-connect' 'included bridge'
 require_text docs/integration-contract.md 'status.*hooks|hooks.*status' 'machine-readable bootstrap handoff'
-require_text docs/integration-contract.md 'openhouse/product-payloads/service-manager\.tar\.gz' 'service-manager APK payload path'
-require_text docs/integration-contract.md 'openhouse/product-payloads/openhouse-connect\.tar\.gz' 'cc-connect APK payload path'
-require_text docs/integration-contract.md 'openhouse/product-payloads/smallphone\.tar\.gz' 'SmallPhone APK payload path'
+require_text docs/integration-contract.md 'openhouse/product-payloads/service-manager\.tar' 'service-manager APK payload path'
+require_text docs/integration-contract.md 'openhouse/product-payloads/openhouse-connect\.tar' 'cc-connect APK payload path'
+require_text docs/integration-contract.md 'openhouse/product-payloads/smallphone\.tar' 'SmallPhone APK payload path'
 require_text docs/integration-contract.md 'optional update path only' 'network is optional update path'
 
 require_text openhouseai-bootstrap/README.md 'SmallPhoneAI' 'bootstrap product name'
@@ -176,9 +176,9 @@ require_text openhouseai-app/app/src/main/java/com/termux/app/openhouse/OpenHous
 require_text openhouseai-app/app/src/main/java/com/termux/app/openhouse/OpenHouseMaintainerRunner.java 'smallphoneai/bootstrap' 'Android bootstrap asset extraction'
 require_text openhouseai-app/app/src/main/java/com/termux/app/openhouse/OpenHouseMaintainerRunner.java 'SMALLPHONEAI_BOOTSTRAP' 'Android bundled bootstrap handoff'
 require_text scripts/check-apk-product-payloads.sh 'openhouse/product-payloads' 'payload asset validator'
-require_text scripts/check-apk-product-payloads.sh 'service-manager\.tar\.gz' 'service-manager payload validator'
-require_text scripts/check-apk-product-payloads.sh 'openhouse-connect\.tar\.gz' 'cc-connect payload validator'
-require_text scripts/check-apk-product-payloads.sh 'smallphone\.tar\.gz' 'SmallPhone payload validator'
+require_text scripts/check-apk-product-payloads.sh 'service-manager\.tar' 'service-manager payload validator'
+require_text scripts/check-apk-product-payloads.sh 'openhouse-connect\.tar' 'cc-connect payload validator'
+require_text scripts/check-apk-product-payloads.sh 'smallphone\.tar' 'SmallPhone payload validator'
 require_text scripts/package-apk-product-payloads.sh 'openhouse/product-payloads' 'payload packager asset root'
 
 require_text openhouseai-ui-preview/src/App.tsx 'service-manager' 'preview service-manager signal'
