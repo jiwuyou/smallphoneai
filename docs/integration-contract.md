@@ -93,11 +93,13 @@ repair/update flows and is not a first-run dependency.
 Canonical local runtime ports follow the OpenHouse five-digit `2xxxx` target
 namespace:
 
-| Surface | URL |
+| Surface | Endpoint |
 | --- | --- |
 | SmallPhone frontend | `http://127.0.0.1:22082/` |
 | SmallPhone core API | `http://127.0.0.1:22000/` |
-| cc-connect webclient | `http://127.0.0.1:21040/` |
+| cc-connect bridge | `tcp://127.0.0.1:21010` |
+| cc-connect management | `tcp://127.0.0.1:21020` |
+| cc-connect webhook/callback | `tcp://127.0.0.1:21040` |
 | service-manager | `http://127.0.0.1:20087/` |
 
 SmallPhone standalone app control-test ports use the OpenHouse `23000-24999`

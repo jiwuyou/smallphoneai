@@ -38,6 +38,19 @@ require_payload_contract() {
     payload_source_contains_executable "$source" "$payload_name" \
       || die "$name source missing executable $required_description: $source"
   fi
+
+  case "$payload_name" in
+    openhouse-connect)
+      [ -f "$source/scripts/register-service.sh" ] \
+        || die "$name source missing scripts/register-service.sh: $source"
+      grep -Fq 'detect_claude_cli' "$source/scripts/register-service.sh" \
+        || die "$name source register-service.sh must auto-detect Claude CLI: $source"
+      grep -Fq 'CC_CONNECT_BRIDGE_PORT' "$source/scripts/register-service.sh" \
+        || die "$name source register-service.sh missing bridge port config: $source"
+      grep -Fq 'CC_CONNECT_MANAGEMENT_PORT' "$source/scripts/register-service.sh" \
+        || die "$name source register-service.sh missing management port config: $source"
+      ;;
+  esac
 }
 
 write_payload() {
@@ -61,6 +74,12 @@ write_payload() {
     --exclude='./.gomodcache/*' \
     --exclude='./.gopath' \
     --exclude='./.gopath/*' \
+    --exclude='./web/node_modules' \
+    --exclude='./web/node_modules/*' \
+    --exclude='./web/dist' \
+    --exclude='./web/dist/*' \
+    --exclude='./node_modules' \
+    --exclude='./node_modules/*' \
     --exclude='./target' \
     --exclude='./target/*' \
     --exclude='./dist' \
@@ -68,6 +87,13 @@ write_payload() {
     -cf "$payload_dir/$archive" \
     -C "$source" \
     .
+
+  case "$payload_name" in
+    openhouse-connect)
+      tar -xOf "$payload_dir/$archive" ./scripts/register-service.sh | grep -Fq 'detect_claude_cli' \
+        || die "$name payload archive missing Claude CLI auto-detection: $payload_dir/$archive"
+      ;;
+  esac
 }
 
 payload_source_contains_executable() {
@@ -102,7 +128,7 @@ payload_executable_description() {
 }
 
 service_manager_source="${SMALLPHONEAI_SERVICE_MANAGER_SOURCE:-$(first_existing_dir /root/projects/service-manager "$root/../service-manager" || true)}"
-cc_connect_source="${SMALLPHONEAI_CC_CONNECT_SOURCE:-$(first_existing_dir /root/cc-connect-fresh /root/cc-connect "$root/../openhouse-connect" "$root/../cc-connect" || true)}"
+cc_connect_source="${SMALLPHONEAI_CC_CONNECT_SOURCE:-$(first_existing_dir /root/openhouse-connect-fresh /root/cc-connect-fresh /root/cc-connect "$root/../openhouse-connect-fresh" "$root/../openhouse-connect" "$root/../cc-connect" || true)}"
 smallphone_source="${SMALLPHONEAI_SMALLPHONE_SOURCE:-$(first_existing_dir /root/projects/smallphone/smallphone-active "$root/../smallphone-active" "$root/../smallphone" || true)}"
 
 [ -n "$service_manager_source" ] || die "service-manager source not found; set SMALLPHONEAI_SERVICE_MANAGER_SOURCE"
