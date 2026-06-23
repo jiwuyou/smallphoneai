@@ -25,6 +25,7 @@ check Termux
   -> install required agent tools
   -> run runtime-components registration
   -> register service-manager services
+  -> sync OpenHouse registry to the Termux canonical mirror
   -> start SmallPhone through service-manager
   -> run health checks
   -> report the SmallPhone launch target to the app
@@ -47,6 +48,42 @@ check Termux
 - Runtime placement: `service-manager`, SmallPhone, and `cc-connect` run in
   Ubuntu/proot by default. Termux native scripts are the bootstrap, bridge, and
   recovery fallback.
+
+## Registry Sync Flow
+
+Bootstrap is not the normal registry writer. During a healthy install or update,
+project manifests are submitted to the `service-manager` registry API. The API
+validates them, writes the Ubuntu runtime registry, syncs the Termux canonical
+mirror, and records `registry-state.json`.
+
+Bootstrap owns the fallback path for registry recovery:
+
+```text
+service-manager reachable
+  -> call service-manager registry sync/apply API
+  -> Android reads Termux canonical mirror
+
+service-manager unavailable
+  -> bootstrap repair restores or resyncs the Termux mirror from known-good local files
+  -> bootstrap records fallback diagnostics in registry-state.json when possible
+  -> bootstrap restarts or reinstalls service-manager
+```
+
+The Termux mirror path is:
+
+```text
+/data/data/com.termux/files/home/.config/openhouseai
+```
+
+The Ubuntu runtime source path is:
+
+```text
+/root/.config/openhouseai
+```
+
+Users, plugins, and AI tools should edit project source manifests, not the
+Termux mirror. The mirror is Android-readable generated state and may be
+replaced on the next registry sync or repair.
 
 ## Offline First-Run Contract
 

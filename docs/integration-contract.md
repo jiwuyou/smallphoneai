@@ -50,6 +50,32 @@ hold the user in recovery.
 `install`/`full`, `start`, and `repair` hooks report final health by printing a
 final status JSON object after any progress logs.
 
+## OpenHouse Registry Contract
+
+OpenHouse registry has three distinct layers:
+
+| Layer | Path | Owner | Write policy |
+| --- | --- | --- | --- |
+| Project manifest source | `$HOME/smallphoneai-repos/<project>/openhouse/*.json` or equivalent project files | The project or plugin | Editable source. Developers and AI tools may change it as part of that project. |
+| Ubuntu runtime registry | `/root/.config/openhouseai` inside Ubuntu/proot | `service-manager` registry API | Runtime state. Normal writes go through the API, with schema validation and atomic file replacement. |
+| Termux canonical mirror | `/data/data/com.termux/files/home/.config/openhouseai` | Registry sync action | Android-readable mirror. Do not hand-edit; it is regenerated from the Ubuntu runtime registry. |
+
+The Android host and SmallPhone surfaces read the Termux canonical mirror. They
+must not read into the Ubuntu rootfs directly. `service-manager` writes and
+syncs the runtime registry during normal operation. Bootstrap may write or
+restore the mirror only as a recovery fallback when `service-manager` is not
+available.
+
+The mirror includes `components.d/*.json` for menu entries and may include
+`registry-state.json` for diagnostics. `registry-state.json` should describe the
+last sync status, source path, target path, file checksums/counts, timestamp, and
+errors. Android treats a missing or invalid state file as diagnostic information,
+not as a reason to crash or hide all built-in menu entries.
+
+Component manifests are UI capability contracts. They must not contain process
+execution fields such as `command`, `shell`, `script`, or `args`. Those fields
+belong only in service-manager service specs.
+
 ## Core Stack
 
 Minimum target stack:

@@ -3,6 +3,8 @@ set -eu
 
 root="${1:-/root/projects/smallphoneai}"
 payload_dir="${SMALLPHONEAI_APK_PRODUCT_PAYLOAD_DIR:-$root/openhouseai-app/app/src/main/assets/openhouse/product-payloads}"
+service_manager_payload_arch="${SMALLPHONEAI_SERVICE_MANAGER_PAYLOAD_ARCH:-aarch64}"
+cc_connect_payload_arch="${SMALLPHONEAI_CC_CONNECT_PAYLOAD_ARCH:-aarch64}"
 missing=0
 
 fail() {
@@ -65,10 +67,78 @@ archive_contains_executable() {
   '
 }
 
+archive_file_contains_text() {
+  archive="$1"
+  path="$2"
+  pattern="$3"
+
+  case "$archive" in
+    *.tar) tar -xOf "$archive" "$path" ;;
+    *) tar -xOzf "$archive" "$path" ;;
+  esac | grep -Fq "$pattern"
+}
+
+archive_file_rejects_text() {
+  archive="$1"
+  path="$2"
+  pattern="$3"
+
+  if case "$archive" in
+    *.tar) tar -xOf "$archive" "$path" ;;
+    *) tar -xOzf "$archive" "$path" ;;
+  esac | grep -Fq "$pattern"; then
+    return 1
+  fi
+  return 0
+}
+
+archive_file_payload_block_rejects_line() {
+  archive="$1"
+  path="$2"
+  rejected="$3"
+
+  case "$archive" in
+    *.tar) tar -xOf "$archive" "$path" ;;
+    *) tar -xOzf "$archive" "$path" ;;
+  esac | awk -v rejected="$rejected" '
+    /payload = \{/ { in_payload = 1 }
+    in_payload && $0 == rejected { found = 1 }
+    in_payload && /^with open\(out_path,/ { in_payload = 0 }
+    END { exit(found ? 1 : 0) }
+  '
+}
+
+archive_executable_matches_arch() {
+  archive="$1"
+  executable="$2"
+  expected_arch="$3"
+
+  command -v file >/dev/null 2>&1 || return 0
+  tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/smallphoneai-payload-bin.XXXXXX")"
+  case "$archive" in
+    *.tar) tar -xf "$archive" -C "$tmp_dir" "./$executable" ;;
+    *) tar -xzf "$archive" -C "$tmp_dir" "./$executable" ;;
+  esac
+  description="$(file "$tmp_dir/$executable" 2>/dev/null || true)"
+  rm -rf "$tmp_dir"
+
+  case "$expected_arch" in
+    aarch64|arm64)
+      printf '%s\n' "$description" | grep -Eq 'ARM aarch64|aarch64'
+      ;;
+    x86_64|amd64)
+      printf '%s\n' "$description" | grep -Eq 'x86-64|x86_64'
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 payload_executable_pattern() {
   case "$1" in
     service-manager)
-      printf '^(service-manager|target/release/service-manager)$'
+      printf '^service-manager$'
       ;;
     openhouse-connect)
       printf '^cc-connect$'
@@ -82,7 +152,7 @@ payload_executable_pattern() {
 payload_executable_description() {
   case "$1" in
     service-manager)
-      printf 'service-manager at service-manager or target/release/service-manager'
+      printf 'service-manager at service-manager'
       ;;
     openhouse-connect)
       printf 'cc-connect at cc-connect'
@@ -134,6 +204,21 @@ check_payload() {
     fi
   fi
 
+  if [ "$payload_name" = "service-manager" ]; then
+    if archive_executable_matches_arch "$archive" "service-manager" "$service_manager_payload_arch"; then
+      ok "$name payload executable is $service_manager_payload_arch"
+    else
+      fail "$name payload executable must be $service_manager_payload_arch"
+    fi
+  fi
+  if [ "$payload_name" = "openhouse-connect" ]; then
+    if archive_executable_matches_arch "$archive" "cc-connect" "$cc_connect_payload_arch"; then
+      ok "$name payload executable is $cc_connect_payload_arch"
+    else
+      fail "$name payload executable must be $cc_connect_payload_arch"
+    fi
+  fi
+
   if archive_rejects "$archive" '(^|/)\.git(/|$)'; then
     ok "$name payload excludes .git metadata"
   else
@@ -144,6 +229,26 @@ check_payload() {
     ok "$name payload excludes build/cache directories"
   else
     fail "$name payload must not bundle build/cache directories"
+  fi
+
+  if [ "$payload_name" = "hermes" ]; then
+    if archive_file_contains_text "$archive" "./scripts/register-service.sh" "/api/v1/registry/apply"; then
+      ok "$name payload register-service.sh uses service-manager registry API"
+    else
+      fail "$name payload register-service.sh must call /api/v1/registry/apply"
+    fi
+    if archive_file_rejects_text "$archive" "./scripts/register-service.sh" "/api/v1/services"; then
+      ok "$name payload register-service.sh avoids legacy /api/v1/services registration"
+    else
+      fail "$name payload register-service.sh must not use legacy /api/v1/services registration"
+    fi
+    if archive_file_payload_block_rejects_line "$archive" "./scripts/register-service.sh" '    "schemaVersion": 1,' \
+      && archive_file_payload_block_rejects_line "$archive" "./scripts/register-service.sh" '    "id": "hermes-webui",' \
+      && archive_file_payload_block_rejects_line "$archive" "./scripts/register-service.sh" '    "componentId": "hermes-webui",'; then
+      ok "$name payload apply body excludes legacy top-level metadata"
+    else
+      fail "$name payload apply body must only use component/components/services/aiDocs top-level keys"
+    fi
   fi
 }
 
@@ -173,6 +278,16 @@ check_manifest_entry() {
   fi
 }
 
+first_existing_payload_archive() {
+  for archive_name in "$@"; do
+    if [ -s "$payload_dir/$archive_name" ]; then
+      printf '%s\n' "$archive_name"
+      return 0
+    fi
+  done
+  return 1
+}
+
 if [ -d "$payload_dir" ]; then
   ok "APK product payload directory exists: ${payload_dir#$root/}"
 else
@@ -182,9 +297,16 @@ fi
 check_payload "service-manager" "service-manager.tar" "service-manager"
 check_payload "cc-connect/openhouse-connect" "openhouse-connect.tar" "openhouse-connect"
 check_payload "SmallPhone" "smallphone.tar"
+hermes_archive="$(first_existing_payload_archive "hermes.tar" "hermes.tar.gz" "hermes.tgz" || true)"
+if [ -n "$hermes_archive" ]; then
+  check_payload "Hermes" "$hermes_archive" "hermes"
+fi
 
 check_manifest_entry "service-manager" "service-manager.tar"
 check_manifest_entry "cc-connect/openhouse-connect" "openhouse-connect.tar"
 check_manifest_entry "SmallPhone" "smallphone.tar"
+if [ -n "$hermes_archive" ]; then
+  check_manifest_entry "Hermes" "$hermes_archive"
+fi
 
 exit "$missing"

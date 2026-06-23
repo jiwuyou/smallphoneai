@@ -26,5 +26,11 @@ SmallPhoneAI includes:
 - Keep first-run and recovery flows idempotent where practical.
 - Keep secrets, tokens, provider API keys, and local credentials out of tracked
   files.
+- Treat OpenHouse project manifests as editable source, but keep runtime
+  registry writes behind `service-manager` APIs.
+- Do not hand-edit the Termux canonical registry mirror under
+  `/data/data/com.termux/files/home/.config/openhouseai`; it is generated state
+  for Android to read and should be repaired or resynced through bootstrap only
+  when `service-manager` is unavailable.
 - Treat `openhouseai-*` child repository names as transitional implementation
   names. Do not use them to narrow the product back to an installer-only scope.
