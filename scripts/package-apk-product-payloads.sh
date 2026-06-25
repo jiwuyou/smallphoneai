@@ -141,16 +141,23 @@ require_hermes_payload_contract() {
   [ -f "$agent_source/openhouse/openhouse.ai.md" ] || die "Hermes Agent source missing openhouse/openhouse.ai.md: $agent_source"
   [ -x "$agent_source/openhouse/start-hermes-webui.sh" ] \
     || die "Hermes start-hermes-webui.sh must be executable: $agent_source/openhouse/start-hermes-webui.sh"
-  grep -Fq 'OPENHOUSE_FOREGROUND_WRAPPER=hermes-webui-v1' "$agent_source/openhouse/start-hermes-webui.sh" \
-    || die "Hermes start-hermes-webui.sh missing foreground wrapper contract marker: $agent_source/openhouse/start-hermes-webui.sh"
-  grep -Fq 'exec -a "$exec_argv0" "$venv_python" "$server_path"' "$agent_source/openhouse/start-hermes-webui.sh" \
-    || die "Hermes start-hermes-webui.sh must exec the long-running server with stable argv: $agent_source/openhouse/start-hermes-webui.sh"
+  grep -Fq 'OPENHOUSE_FOREGROUND_START=hermes-webui-v2' "$agent_source/openhouse/start-hermes-webui.sh" \
+    || die "Hermes start-hermes-webui.sh missing foreground start marker: $agent_source/openhouse/start-hermes-webui.sh"
+  grep -Fq 'exec "$venv_python" "$server_path"' "$agent_source/openhouse/start-hermes-webui.sh" \
+    || die "Hermes start-hermes-webui.sh must exec the real Python server without overriding argv0: $agent_source/openhouse/start-hermes-webui.sh"
+  if grep -Fq 'exec -a' "$agent_source/openhouse/start-hermes-webui.sh"; then
+    die "Hermes start-hermes-webui.sh must not use exec -a; it breaks Python venv discovery: $agent_source/openhouse/start-hermes-webui.sh"
+  fi
   grep -Fq '/api/v1/registry/apply' "$agent_source/openhouse/register-service.sh" \
     || die "Hermes register-service.sh must call service-manager registry API: $agent_source/openhouse/register-service.sh"
   grep -Fq '"repair":' "$agent_source/openhouse/register-service.sh" \
     || die "Hermes register-service.sh must register a service-manager repair hook: $agent_source/openhouse/register-service.sh"
-  grep -Fq 'start-hermes-webui.sh' "$agent_source/openhouse/register-service.sh" \
-    || die "Hermes register-service.sh must register start-hermes-webui.sh as service.command: $agent_source/openhouse/register-service.sh"
+  grep -Fq 'venv_python,' "$agent_source/openhouse/register-service.sh" \
+    && grep -Fq 'server_script,' "$agent_source/openhouse/register-service.sh" \
+    || die "Hermes register-service.sh must register venv Python + server.py as service.command: $agent_source/openhouse/register-service.sh"
+  if grep -Fq 'start-hermes-webui.sh' "$agent_source/openhouse/register-service.sh"; then
+    die "Hermes register-service.sh must not register start-hermes-webui.sh as service.command: $agent_source/openhouse/register-service.sh"
+  fi
   if grep -Fq '"./bootstrap.py"' "$agent_source/openhouse/register-service.sh"; then
     die "Hermes register-service.sh must not register bootstrap.py as service.command: $agent_source/openhouse/register-service.sh"
   fi

@@ -308,21 +308,28 @@ check_payload() {
     else
       fail "$name payload register-service.sh must declare service-manager repair hook"
     fi
-    if archive_file_contains_text "$archive" "./scripts/register-service.sh" "start-hermes-webui.sh"; then
-      ok "$name payload register-service.sh uses Hermes foreground wrapper"
+    if archive_file_contains_text "$archive" "./scripts/register-service.sh" "venv_python," \
+      && archive_file_contains_text "$archive" "./scripts/register-service.sh" "server_script,"; then
+      ok "$name payload register-service.sh uses real Python server argv"
     else
-      fail "$name payload register-service.sh must register start-hermes-webui.sh as service.command"
+      fail "$name payload register-service.sh must register venv Python + server.py as service.command"
+    fi
+    if archive_file_rejects_text "$archive" "./scripts/register-service.sh" "start-hermes-webui.sh"; then
+      ok "$name payload register-service.sh does not register Hermes start wrapper"
+    else
+      fail "$name payload register-service.sh must not register start-hermes-webui.sh as service.command"
     fi
     if archive_file_rejects_text "$archive" "./scripts/register-service.sh" '"./bootstrap.py"'; then
       ok "$name payload register-service.sh does not register bootstrap.py as service.command"
     else
       fail "$name payload register-service.sh must not register bootstrap.py as service.command"
     fi
-    if archive_file_contains_text "$archive" "./scripts/start-hermes-webui.sh" "OPENHOUSE_FOREGROUND_WRAPPER=hermes-webui-v1" \
-      && archive_file_contains_text "$archive" "./scripts/start-hermes-webui.sh" 'exec -a "$exec_argv0" "$venv_python" "$server_path"'; then
-      ok "$name payload start-hermes-webui.sh preserves stable service-manager argv"
+    if archive_file_contains_text "$archive" "./scripts/start-hermes-webui.sh" "OPENHOUSE_FOREGROUND_START=hermes-webui-v2" \
+      && archive_file_contains_text "$archive" "./scripts/start-hermes-webui.sh" 'exec "$venv_python" "$server_path"' \
+      && archive_file_rejects_text "$archive" "./scripts/start-hermes-webui.sh" "exec -a"; then
+      ok "$name payload start-hermes-webui.sh preserves Python venv argv"
     else
-      fail "$name payload start-hermes-webui.sh must preserve stable service-manager argv"
+      fail "$name payload start-hermes-webui.sh must exec Python without overriding argv0"
     fi
     if archive_file_rejects_text "$archive" "./scripts/register-service.sh" "/api/v1/services"; then
       ok "$name payload register-service.sh avoids legacy /api/v1/services registration"
