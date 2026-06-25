@@ -71,24 +71,33 @@ archive_file_contains_text() {
   archive="$1"
   path="$2"
   pattern="$3"
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/smallphoneai-payload-file.XXXXXX")"
 
   case "$archive" in
     *.tar) tar -xOf "$archive" "$path" ;;
     *) tar -xOzf "$archive" "$path" ;;
-  esac | grep -Fq "$pattern"
+  esac > "$tmp_file"
+  grep -Fq "$pattern" "$tmp_file"
+  status=$?
+  rm -f "$tmp_file"
+  return "$status"
 }
 
 archive_file_rejects_text() {
   archive="$1"
   path="$2"
   pattern="$3"
+  tmp_file="$(mktemp "${TMPDIR:-/tmp}/smallphoneai-payload-file.XXXXXX")"
 
-  if case "$archive" in
+  case "$archive" in
     *.tar) tar -xOf "$archive" "$path" ;;
     *) tar -xOzf "$archive" "$path" ;;
-  esac | grep -Fq "$pattern"; then
+  esac > "$tmp_file"
+  if grep -Fq "$pattern" "$tmp_file"; then
+    rm -f "$tmp_file"
     return 1
   fi
+  rm -f "$tmp_file"
   return 0
 }
 
@@ -133,6 +142,23 @@ archive_executable_matches_arch() {
       return 1
       ;;
   esac
+}
+
+archive_executable_contains_text() {
+  archive="$1"
+  executable="$2"
+  pattern="$3"
+
+  command -v strings >/dev/null 2>&1 || return 1
+  tmp_dir="$(mktemp -d "${TMPDIR:-/tmp}/smallphoneai-payload-bin.XXXXXX")"
+  case "$archive" in
+    *.tar) tar -xf "$archive" -C "$tmp_dir" "./$executable" ;;
+    *) tar -xzf "$archive" -C "$tmp_dir" "./$executable" ;;
+  esac
+  LC_ALL=C strings "$tmp_dir/$executable" 2>/dev/null | grep -Fq "$pattern"
+  status=$?
+  rm -rf "$tmp_dir"
+  return "$status"
 }
 
 payload_executable_pattern() {
@@ -210,6 +236,16 @@ check_payload() {
     else
       fail "$name payload executable must be $service_manager_payload_arch"
     fi
+    if archive_executable_contains_text "$archive" "service-manager" "service-manager.repair"; then
+      ok "$name payload executable supports service-manager repair hook marker"
+    else
+      fail "$name payload executable missing service-manager repair hook marker"
+    fi
+    if archive_executable_contains_text "$archive" "service-manager" "RepairHook"; then
+      ok "$name payload executable supports RepairHook schema"
+    else
+      fail "$name payload executable missing RepairHook schema support"
+    fi
   fi
   if [ "$payload_name" = "openhouse-connect" ]; then
     if archive_executable_matches_arch "$archive" "cc-connect" "$cc_connect_payload_arch"; then
@@ -232,10 +268,61 @@ check_payload() {
   fi
 
   if [ "$payload_name" = "hermes" ]; then
+    if archive_contains "$archive" '(^|/)scripts/start-hermes-webui\.sh$'; then
+      ok "$name payload contains scripts/start-hermes-webui.sh"
+    else
+      fail "$name payload missing scripts/start-hermes-webui.sh"
+    fi
+    if archive_contains "$archive" '(^|/)scripts/repair-hermes-webui\.sh$'; then
+      ok "$name payload contains scripts/repair-hermes-webui.sh"
+    else
+      fail "$name payload missing scripts/repair-hermes-webui.sh"
+    fi
+    if archive_contains "$archive" '(^|/)scripts/snapshot-hermes-webui\.sh$'; then
+      ok "$name payload contains scripts/snapshot-hermes-webui.sh"
+    else
+      fail "$name payload missing scripts/snapshot-hermes-webui.sh"
+    fi
+    if archive_contains_executable "$archive" '^scripts/start-hermes-webui[.]sh$'; then
+      ok "$name payload start-hermes-webui.sh is executable"
+    else
+      fail "$name payload start-hermes-webui.sh must be executable"
+    fi
+    if archive_contains_executable "$archive" '^scripts/repair-hermes-webui[.]sh$'; then
+      ok "$name payload repair-hermes-webui.sh is executable"
+    else
+      fail "$name payload repair-hermes-webui.sh must be executable"
+    fi
+    if archive_contains_executable "$archive" '^scripts/snapshot-hermes-webui[.]sh$'; then
+      ok "$name payload snapshot-hermes-webui.sh is executable"
+    else
+      fail "$name payload snapshot-hermes-webui.sh must be executable"
+    fi
     if archive_file_contains_text "$archive" "./scripts/register-service.sh" "/api/v1/registry/apply"; then
       ok "$name payload register-service.sh uses service-manager registry API"
     else
       fail "$name payload register-service.sh must call /api/v1/registry/apply"
+    fi
+    if archive_file_contains_text "$archive" "./scripts/register-service.sh" '"repair":'; then
+      ok "$name payload register-service.sh declares service-manager repair hook"
+    else
+      fail "$name payload register-service.sh must declare service-manager repair hook"
+    fi
+    if archive_file_contains_text "$archive" "./scripts/register-service.sh" "start-hermes-webui.sh"; then
+      ok "$name payload register-service.sh uses Hermes foreground wrapper"
+    else
+      fail "$name payload register-service.sh must register start-hermes-webui.sh as service.command"
+    fi
+    if archive_file_rejects_text "$archive" "./scripts/register-service.sh" '"./bootstrap.py"'; then
+      ok "$name payload register-service.sh does not register bootstrap.py as service.command"
+    else
+      fail "$name payload register-service.sh must not register bootstrap.py as service.command"
+    fi
+    if archive_file_contains_text "$archive" "./scripts/start-hermes-webui.sh" "OPENHOUSE_FOREGROUND_WRAPPER=hermes-webui-v1" \
+      && archive_file_contains_text "$archive" "./scripts/start-hermes-webui.sh" 'exec -a "$exec_argv0" "$venv_python" "$server_path"'; then
+      ok "$name payload start-hermes-webui.sh preserves stable service-manager argv"
+    else
+      fail "$name payload start-hermes-webui.sh must preserve stable service-manager argv"
     fi
     if archive_file_rejects_text "$archive" "./scripts/register-service.sh" "/api/v1/services"; then
       ok "$name payload register-service.sh avoids legacy /api/v1/services registration"
@@ -297,7 +384,13 @@ fi
 check_payload "service-manager" "service-manager.tar" "service-manager"
 check_payload "cc-connect/openhouse-connect" "openhouse-connect.tar" "openhouse-connect"
 check_payload "SmallPhone" "smallphone.tar"
-hermes_archive="$(first_existing_payload_archive "hermes.tar" "hermes.tar.gz" "hermes.tgz" || true)"
+if [ -s "$payload_dir/hermes.tar.gz" ]; then
+  fail "Hermes payload must not use .tar.gz as an APK asset name; use hermes.tgz to avoid Android .gz asset remapping"
+fi
+if [ -s "$payload_dir/hermes.tar" ]; then
+  fail "Hermes payload must not be named hermes.tar; use hermes.tgz for gzip-compressed content"
+fi
+hermes_archive="$(first_existing_payload_archive "hermes.tgz" || true)"
 if [ -n "$hermes_archive" ]; then
   check_payload "Hermes" "$hermes_archive" "hermes"
 fi

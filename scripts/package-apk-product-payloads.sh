@@ -44,6 +44,10 @@ require_payload_contract() {
   if [ "$payload_name" = "service-manager" ]; then
     payload_source_executable_matches_arch "$source/service-manager" "$service_manager_payload_arch" \
       || die "$name source executable must be $service_manager_payload_arch for APK payload: $source/service-manager"
+    payload_source_executable_contains_text "$source/service-manager" "service-manager.repair" \
+      || die "$name source executable missing repair hook marker: $source/service-manager"
+    payload_source_executable_contains_text "$source/service-manager" "RepairHook" \
+      || die "$name source executable missing RepairHook support: $source/service-manager"
   fi
   if [ "$payload_name" = "openhouse-connect" ]; then
     payload_source_executable_matches_arch "$source/cc-connect" "$cc_connect_payload_arch" \
@@ -127,13 +131,29 @@ require_hermes_payload_contract() {
   [ -f "$agent_source/pyproject.toml" ] || die "Hermes Agent source missing pyproject.toml: $agent_source"
   [ -f "$agent_source/openhouse/install.sh" ] || die "Hermes Agent source missing openhouse/install.sh: $agent_source"
   [ -f "$agent_source/openhouse/check.sh" ] || die "Hermes Agent source missing openhouse/check.sh: $agent_source"
+  [ -f "$agent_source/openhouse/start-hermes-webui.sh" ] || die "Hermes Agent source missing openhouse/start-hermes-webui.sh: $agent_source"
   [ -f "$agent_source/openhouse/register-service.sh" ] || die "Hermes Agent source missing openhouse/register-service.sh: $agent_source"
+  [ -f "$agent_source/openhouse/repair-hermes-webui.sh" ] || die "Hermes Agent source missing openhouse/repair-hermes-webui.sh: $agent_source"
+  [ -f "$agent_source/openhouse/snapshot-hermes-webui.sh" ] || die "Hermes Agent source missing openhouse/snapshot-hermes-webui.sh: $agent_source"
   [ -f "$agent_source/openhouse/component-manifest.json" ] || die "Hermes Agent source missing openhouse/component-manifest.json: $agent_source"
   [ -f "$agent_source/openhouse/component-manifest.schema.json" ] || die "Hermes Agent source missing openhouse/component-manifest.schema.json: $agent_source"
   [ -f "$agent_source/openhouse/capabilities.json" ] || die "Hermes Agent source missing openhouse/capabilities.json: $agent_source"
   [ -f "$agent_source/openhouse/openhouse.ai.md" ] || die "Hermes Agent source missing openhouse/openhouse.ai.md: $agent_source"
+  [ -x "$agent_source/openhouse/start-hermes-webui.sh" ] \
+    || die "Hermes start-hermes-webui.sh must be executable: $agent_source/openhouse/start-hermes-webui.sh"
+  grep -Fq 'OPENHOUSE_FOREGROUND_WRAPPER=hermes-webui-v1' "$agent_source/openhouse/start-hermes-webui.sh" \
+    || die "Hermes start-hermes-webui.sh missing foreground wrapper contract marker: $agent_source/openhouse/start-hermes-webui.sh"
+  grep -Fq 'exec -a "$exec_argv0" "$venv_python" "$server_path"' "$agent_source/openhouse/start-hermes-webui.sh" \
+    || die "Hermes start-hermes-webui.sh must exec the long-running server with stable argv: $agent_source/openhouse/start-hermes-webui.sh"
   grep -Fq '/api/v1/registry/apply' "$agent_source/openhouse/register-service.sh" \
     || die "Hermes register-service.sh must call service-manager registry API: $agent_source/openhouse/register-service.sh"
+  grep -Fq '"repair":' "$agent_source/openhouse/register-service.sh" \
+    || die "Hermes register-service.sh must register a service-manager repair hook: $agent_source/openhouse/register-service.sh"
+  grep -Fq 'start-hermes-webui.sh' "$agent_source/openhouse/register-service.sh" \
+    || die "Hermes register-service.sh must register start-hermes-webui.sh as service.command: $agent_source/openhouse/register-service.sh"
+  if grep -Fq '"./bootstrap.py"' "$agent_source/openhouse/register-service.sh"; then
+    die "Hermes register-service.sh must not register bootstrap.py as service.command: $agent_source/openhouse/register-service.sh"
+  fi
   if grep -Fq '/api/v1/services' "$agent_source/openhouse/register-service.sh"; then
     die "Hermes register-service.sh must not use legacy /api/v1/services registration: $agent_source/openhouse/register-service.sh"
   fi
@@ -163,12 +183,21 @@ write_hermes_payload() {
 
   cp "$agent_source/openhouse/install.sh" "$tmp/scripts/install.sh"
   cp "$agent_source/openhouse/check.sh" "$tmp/scripts/check.sh"
+  cp "$agent_source/openhouse/start-hermes-webui.sh" "$tmp/scripts/start-hermes-webui.sh"
   cp "$agent_source/openhouse/register-service.sh" "$tmp/scripts/register-service.sh"
+  cp "$agent_source/openhouse/repair-hermes-webui.sh" "$tmp/scripts/repair-hermes-webui.sh"
+  cp "$agent_source/openhouse/snapshot-hermes-webui.sh" "$tmp/scripts/snapshot-hermes-webui.sh"
   cp "$agent_source/openhouse/component-manifest.json" "$tmp/component-manifest.json"
   cp "$agent_source/openhouse/component-manifest.schema.json" "$tmp/component-manifest.schema.json"
   cp "$agent_source/openhouse/capabilities.json" "$tmp/capabilities.json"
   cp "$agent_source/openhouse/openhouse.ai.md" "$tmp/openhouse.ai.md"
-  chmod 0755 "$tmp/scripts/install.sh" "$tmp/scripts/check.sh" "$tmp/scripts/register-service.sh"
+  chmod 0755 \
+    "$tmp/scripts/install.sh" \
+    "$tmp/scripts/check.sh" \
+    "$tmp/scripts/start-hermes-webui.sh" \
+    "$tmp/scripts/register-service.sh" \
+    "$tmp/scripts/repair-hermes-webui.sh" \
+    "$tmp/scripts/snapshot-hermes-webui.sh"
 
   rsync -a \
     --exclude='.git' \
@@ -249,13 +278,21 @@ payload_source_executable_matches_arch() {
   esac
 }
 
+payload_source_executable_contains_text() {
+  local executable="$1"
+  local pattern="$2"
+
+  command -v strings >/dev/null 2>&1 || return 1
+  LC_ALL=C strings "$executable" 2>/dev/null | grep -Fq "$pattern"
+}
+
 service_manager_source="${SMALLPHONEAI_SERVICE_MANAGER_SOURCE:-$(first_existing_dir /root/projects/service-manager "$root/../service-manager" || true)}"
 cc_connect_source="${SMALLPHONEAI_CC_CONNECT_SOURCE:-$(first_existing_dir /root/openhouse-connect-fresh /root/cc-connect-fresh /root/cc-connect "$root/../openhouse-connect-fresh" "$root/../openhouse-connect" "$root/../cc-connect" || true)}"
 smallphone_source="${SMALLPHONEAI_SMALLPHONE_SOURCE:-$(first_existing_dir /root/projects/smallphone/smallphone-active "$root/../smallphone-active" "$root/../smallphone" || true)}"
 hermes_agent_source="${SMALLPHONEAI_HERMES_AGENT_SOURCE:-$(first_existing_dir /root/projects/hermes-agent "$root/../hermes-agent" || true)}"
 hermes_webui_source="${SMALLPHONEAI_HERMES_WEBUI_SOURCE:-$(first_existing_dir /root/projects/hermes-webui "$root/../hermes-webui" || true)}"
 hermes_archive=""
-for candidate in "$payload_dir/hermes.tar" "$payload_dir/hermes.tar.gz" "$payload_dir/hermes.tgz"; do
+for candidate in "$payload_dir/hermes.tgz" "$payload_dir/hermes.tar"; do
   if [ -s "$candidate" ]; then
     hermes_archive="$(basename "$candidate")"
     break
@@ -273,7 +310,8 @@ write_payload "service-manager" "$service_manager_source" "service-manager.tar" 
 write_payload "cc-connect/openhouse-connect" "$cc_connect_source" "openhouse-connect.tar" "openhouse-connect"
 write_payload "SmallPhone" "$smallphone_source" "smallphone.tar"
 if [ -n "$hermes_agent_source" ] && [ -n "$hermes_webui_source" ]; then
-  hermes_archive="hermes.tar.gz"
+  hermes_archive="hermes.tgz"
+  rm -f "$payload_dir/hermes.tar" "$payload_dir/hermes.tar.gz"
   write_hermes_payload "$hermes_agent_source" "$hermes_webui_source" "$hermes_archive"
 elif [ -n "$hermes_archive" ]; then
   log "Hermes sources not found; keeping existing $hermes_archive"
